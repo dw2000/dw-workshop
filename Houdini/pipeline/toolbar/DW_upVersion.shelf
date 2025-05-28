@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="version_up" label="Save .hip Version Up" icon="ROP_mantra">
+    <helpText><![CDATA[Quickly version-up you .hip file.  F12 for the keyboard shortcut.]]></helpText>
+    <script scriptType="python"><![CDATA[def DW_upVersion():
+
+    import os
+    import re
+
+    split_path = hou.hipFile.path().rsplit("/", 1)
+    save_dir = split_path[0]                         # C:/Dropbox/_work/jobs/machine_testing/films/the_drop/shots/0010/scenes/fx/main
+                                                     # //ditto/jobs/dw_test_0012/films/main_film/shots/0010/scenes/tracking/main
+                                                     
+    current_file = split_path[1]                     # main_film_0010_fx_theDrop_v058_wange.hiplc
+                                                     # main_film_0010_tracking_main_v004_david.wanger_test.hip
+                                                 
+    split_file = re.split(r'_v\d{3}', current_file)  # ['main_film_0010_fx_theDrop', '_wange.hiplc']
+    file_left_side = split_file[0]
+
+    user = os.environ["USER"]                        # divad.regnaw
+
+    
+    # Query-ing the license type is important to avoid mismatches between the file's extension and what type of file it actually is.
+    license_type = hou.licenseCategory().name()
+    if license_type == "Apprentice":
+        file_type = "hipnc"
+    elif license_type == "Indie":
+        file_type = "hiplc"       
+    else:
+         file_type = "hip" 
+
+
+    # any comments in the file name will be stripped out
+    file_right_side = "_" + user + "." + file_type
+
+
+    file_list = os.listdir(save_dir)
+    file_list = [each for each in file_list if "." in each[1:-1] and each.rsplit(".", 1)[1] == file_type]
+    file_list = [each for each in file_list if "_v" in each and re.split(r'_v\d{3}', each)[0] == split_file[0]]
+
+    version_list = [int(re.search(r'_v\d{3}[._]', each).group(0)[2:-1]) for each in file_list] 
+    version_list.sort()
+    max_version = version_list[-1]
+    new_version_string = "v" + str(max_version + 1).rjust(3, '0')   # v005
+
+    print("Incrementing version number and saving...")
+    hou.ui.setStatusMessage("Incrementing version number and saving...")
+    "Incrementing version number and saving..."
+    new_file = file_left_side + "_" + new_version_string + file_right_side
+    new_full_path = save_dir + "/" + new_file
+
+    # this next line is the slow part:
+    hou.hipFile.save(new_full_path)
+
+    hou.putenv("DW_VERSION", new_version_string)
+    print("Saved to: " + new_file)
+    hou.ui.setStatusMessage("Saved to: " + new_file)
+    
+DW_upVersion()
+
+import DW_SaveLoad
+DW_SaveLoad.updateTitleBar()
+
+]]></script>
+  </tool>
+</shelfDocument>

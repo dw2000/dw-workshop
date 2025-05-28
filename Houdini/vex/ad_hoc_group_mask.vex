@@ -1,0 +1,11 @@
+int level = point(0, "level", i@ptnum);
+
+string groupmask = concat("\@temp_level=", itoa(level - 1));
+
+int branch_prim;
+vector branch_uv;
+
+vector joint_P = point(0, "P", i@ptnum);
+vector joint_rest_P = point(1, "P", i@ptnum);
+
+xyzdist(1, groupmask, joint_rest_P, branch_prim, branch_uv);

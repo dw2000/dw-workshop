@@ -1,0 +1,12 @@
+set cut_paste_input [stack 0]
+version 14.1 v1
+push $cut_paste_input
+ContactSheet {
+ width {{input.width*columns}}
+ height {{input.height*rows}}
+ rows {{"floor((inputs / columns) + 0.5)"}}
+ columns 1
+ roworder TopBottom
+ name ContactSheet1
+ selected true
+}

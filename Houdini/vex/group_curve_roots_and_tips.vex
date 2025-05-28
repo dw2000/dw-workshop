@@ -1,0 +1,3 @@
+@group_roots = vertexprimindex(0, @vtxnum) == 0;
+
+@group_tips = vertexprimindex(0, @vtxnum) == primvertexcount(0, i@primnum) - 1;

@@ -1,0 +1,38 @@
+int sin_freq = chi("sin_freq");
+float sin_offset = chf("sin_offset");
+float sin_amplitude = chf("sin_amplitude");
+
+int noise_freq = chi("noise_freq");
+float noise_rotation_offset = chf("noise_rotation_offset") / 2;
+float noise_seed_offset = chf("noise_seed_offset");
+float noise_amplitude = chf("noise_amplitude");
+
+vector center = {0,0,0};
+vector t_axis = v@N;
+
+vector anchor_pos = point(0, "P", 0);
+vector r_axis = normalize(cross(t_axis, anchor_pos - center));
+vector s_axis = normalize(cross(t_axis, r_axis));
+
+vector pos_offset = v@P - center;
+float dist = length(pos_offset);
+float r = dot(pos_offset, r_axis);
+float s = dot(pos_offset, s_axis);
+
+float angle = atan(r, s);
+
+// force boundary values
+if(angle > (PI - 0.000001))
+    angle = -PI;
+if(dist < 0.000001)
+    angle = -PI;
+   
+
+
+float noise_val = pnoise((fit(angle/PI, -1, 1, 0.0, 1.0) + noise_rotation_offset) * noise_freq, noise_seed_offset, noise_freq, 0);
+f@test = noise_val;
+dist *= fit(noise_val, 0, 1, 1, 1+noise_amplitude);
+
+dist *= fit(sin(sin_freq * (angle + sin_offset*PI)), -1, 1, 1, 1+sin_amplitude);
+
+@Cd = dist > chf("dist_threshold");

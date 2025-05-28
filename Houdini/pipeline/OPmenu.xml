@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<menuDocument>
+    <menu>
+    <subMenu id="DW">
+      <label>DW Stuff</label>
+      <insertBefore />
+      <scriptItem id="publishNode">
+        <label>Publish node(s)</label>
+        <scriptCode><![CDATA[
+import DW_PublishAnything
+DW_PublishAnything.publishNode(kwargs["node"])
+        ]]></scriptCode>
+      </scriptItem>
+    </subMenu>
+    </menu>
+</menuDocument>
+

@@ -1,0 +1,9 @@
+{
+    "hpath" : 
+    [
+        {
+            "value" : "$HOUDINI_PACKAGE_PATH/..",
+            "method" : "prepend"
+        }
+    ]
+}

@@ -1,0 +1,23 @@
+// // Replace the integer frame number in a sequence file path, preserving padding. e.g. /XXXXXXX/XXXXXXX_v013.0540.ass.gz -> /XXXXXXX/XXXXXXX_v013.0651.ass.gz
+ // This code doesn't work with fractional frame numbers.
+ // Get the input file path from a string parameter
+
+ string file_path = chs("instance_path");
+
+// This regular expression finds a series of one or more digits bounded on the left by a "." and on the right by a "." followed by a non-digit character.
+
+string file_regex = r"((?!\.)\d+(?=\.\D))";
+ int start_pos [], end_pos [];
+re_find(start_pos, end_pos, file_regex, file_path);
+ // Getting the last regex match found [-1] so that if there are more than one found the last one is assumed to be the frame number.
+
+ int start_index = start_pos[-1];
+ int end_index = end_pos[-1];
+ int pad_length = len((file_path[start_index : end_index]));
+ string pad_expression = concat("\%0", itoa(pad_length), "d");
+ int frame_number = atoi(file_path[start_index : end_index]);
+ // Do something to change or swap in a different frame number
+
+int new_frame_number = frame_number + 111;
+
+string new_file_path = concat(file_path[:start_index], sprintf(pad_expression, new_frame_number), file_path[end_index:]);

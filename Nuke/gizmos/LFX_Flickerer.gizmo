@@ -1,0 +1,38 @@
+#! /Applications/Nuke6.3v5/Nuke6.3v5.app/Contents/MacOS/Nuke6.3v5 -nx
+version 6.3 v5
+Gizmo {
+ inputs 0
+ note_font Verdana
+ mapsize {0.15 0.15}
+ addUserKnob {20 LFX_Flickerer}
+ addUserKnob {7 frequency t "flicker frequency per second" R 0 500}
+ frequency 100
+ addUserKnob {7 minVal l "min value"}
+ addUserKnob {7 maxVal l "max value"}
+ maxVal 1
+ addUserKnob {3 offset l "frame offset"}
+ addUserKnob {3 seed l "random seed"}
+ seed 5
+ addUserKnob {26 ""}
+ addUserKnob {41 format T Constant1.format}
+ addUserKnob {7 fps l "frames per second" t "Reference fps that's used to convert the frequency from Hz into per-frame increments.  This defaults to whatever the project's fps is set to." R 0 100}
+ fps {{"\[python \{nuke.root()\['fps'].value()\}]"}}
+ addUserKnob {6 strobe l "strobe at low frequencies" t "Enables a strobing effect at lower-than-framerate frequencies.\nFor example on a 24fps project with frequency set to 12, the current value will change every other frame; on a 24fps project with frequency set to 6, the current value will change every 4 frames." +STARTLINE}
+ addUserKnob {26 ""}
+ addUserKnob {7 val l "current value"}
+ val {{"(strobe == 0) ? (((noise((frame + offset) * frequency / fps + (random(seed) + seed)) + 1) / 2) * (maxVal - minVal) + minVal) : (((noise(ceil((frame + offset) * frequency / fps) + (random(seed) + seed)) + 1) / 2) * (maxVal - minVal) + minVal)"}}
+}
+ Constant {
+  inputs 0
+  color {{parent.val i}}
+  name Constant1
+  selected true
+  xpos -66
+  ypos -171
+ }
+ Output {
+  name Output1
+  xpos -66
+  ypos -71
+ }
+end_group

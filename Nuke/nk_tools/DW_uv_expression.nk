@@ -1,0 +1,12 @@
+set cut_paste_input [stack 0]
+version 9.0 v7
+push $cut_paste_input
+Expression {
+ expr0 (x+0.5)/input.width
+ expr1 (y+0.5)/input.height
+ channel2 {-rgba.red -rgba.green -rgba.blue}
+ name Expression1
+ selected true
+ xpos -100
+ ypos -54
+}

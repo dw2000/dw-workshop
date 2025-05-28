@@ -1,0 +1,38 @@
+set cut_paste_input [stack 0]
+version 14.1 v1
+push $cut_paste_input
+Write {
+ file //xxx/yyyy/zzzzz/shots/0070/hdri/honey_0070_hdri_acescg_v001.exr
+ file_type exr
+ compression DWAA
+ first_part rgba
+ colorspace scene_linear
+ create_directories true
+ use_limit true
+ checkHashOnRead false
+ version 1
+ ocioColorspace scene_linear
+ display ACES
+ view ACEScg_ArriRec709_CG
+ beforeRender nuke.thisNode().knob('file').setValue(nuke.thisNode().knob('output_path').evaluate())
+ beforeFrameRender nuke.thisNode().knob('file').setValue(nuke.thisNode().knob('output_path').evaluate())
+ name Write1
+ onCreate "nuke.thisNode()\['file'].setEnabled(False)"
+ knobChanged "node = nuke.thisNode()\nnode.knob('file').setValue(node.knob('output_path').evaluate())"
+ selected true
+ xpos -49
+ ypos 1645
+ addUserKnob {20 User}
+ addUserKnob {1 incoming_path l "Incoming Path"}
+ incoming_path "\[python nuke.thisNode().metadata()\\\['input/filename'\\].split('shots')\\\[0\\]]"
+ addUserKnob {1 film l Film}
+ film "\[python nuke.thisNode().metadata()\\\['input/filename'\\].split('films')\\\[1\\].split('/')\\\[1\\]]"
+ addUserKnob {1 shot l Shot}
+ shot "\[python nuke.thisNode().metadata()\\\['input/filename'\\].split('shots')\\\[1\\].split('/')\\\[1\\]]"
+ addUserKnob {1 naming l Naming}
+ naming hdri_acescg_
+ addUserKnob {1 versioning l Versioning}
+ versioning "\[python nukescripts.version.version_get(nuke.root().name(), 'v')\\\[1\\]]"
+ addUserKnob {2 output_path l "Output Path"}
+ output_path "\[value incoming_path]shots/\[value shot]/hdri/\[value film]_\[value shot]_\[value naming]v\[value versioning].\[value file_type]"
+}

@@ -1,0 +1,79 @@
+#! /Applications/Nuke6.3v2/NukeX6.3v2.app/../Nuke6.3v2.app/Contents/MacOS/Nuke6.3v2 -nx
+version 6.3 v2
+Gizmo {
+ knobChanged "\n\n\n\n\nif nuke.thisKnob().name() == 'n_ramp':\n    if nuke.thisKnob().value() == 'none':\n        nuke.thisNode()\['n_p1'].setVisible(False)\n        nuke.thisNode()\['n_color0'].setVisible(False)\n        nuke.thisNode()\['n_p0'].setVisible(False)\n\n    else:\n        nuke.thisNode()\['n_p1'].setVisible(True)\n        nuke.thisNode()\['n_color0'].setVisible(True)\n        nuke.thisNode()\['n_p0'].setVisible(True)\n\n\n\n"
+ addUserKnob {20 speedyNoise l LFX_SpeedyNoise}
+ addUserKnob {41 output T Noise.output}
+ addUserKnob {41 premult T Noise.premult}
+ addUserKnob {41 cliptype l "clip to" T Noise.cliptype}
+ addUserKnob {41 replace -STARTLINE T Noise.replace}
+ addUserKnob {41 invert -STARTLINE T Noise.invert}
+ addUserKnob {41 opacity T Noise.opacity}
+ addUserKnob {41 maskChannelInput l mask T Noise.maskChannelInput}
+ addUserKnob {41 inject -STARTLINE T Noise.inject}
+ addUserKnob {41 invert_mask l invert -STARTLINE T Noise.invert_mask}
+ addUserKnob {26 ""}
+ addUserKnob {41 type T Noise.type}
+ addUserKnob {41 size l x/ysize T Noise.size}
+ addUserKnob {7 zoffset l z R 0 5}
+ zoffset {{"(seed + random(seed) * 1000) + (frame + offset) * remappedSpeed"}}
+ addUserKnob {41 octaves T Noise.octaves}
+ addUserKnob {41 nyquist l "clip at Nyquist limit" -STARTLINE T Noise.nyquist}
+ addUserKnob {41 lacunarity T Noise.lacunarity}
+ addUserKnob {41 gain T Noise.gain}
+ addUserKnob {41 gamma T Noise.gamma}
+ addUserKnob {26 ""}
+ addUserKnob {7 speed R 0 1000}
+ speed 250
+ addUserKnob {3 offset l "frame offset"}
+ addUserKnob {3 seed l "random seed"}
+ seed 5
+ addUserKnob {4 remapping t "Remaps the 0 to 1000 range of the speed control to a 0 to 1 multiplier for the z offset control.\n\nExponential will give more precise control of slower speeds." M {linear exponential "" "" ""}}
+ remapping exponential
+ addUserKnob {7 remappedSpeed l INVISIBLE +INVISIBLE}
+ remappedSpeed {{"remapping == 1  ? (speed * speed / 1000000) : (speed/1000)"}}
+ addUserKnob {20 endGroup n -1}
+ addUserKnob {20 Transform}
+ addUserKnob {41 transform T Noise.transform}
+ addUserKnob {41 translate T Noise.translate}
+ addUserKnob {41 rotate T Noise.rotate}
+ addUserKnob {41 scale T Noise.scale}
+ addUserKnob {41 skew T Noise.skew}
+ addUserKnob {41 center T Noise.center}
+ addUserKnob {41 xrotate T Noise.xrotate}
+ addUserKnob {41 yrotate T Noise.yrotate}
+ addUserKnob {20 Color}
+ addUserKnob {4 n_ramp l ramp M {none linear smooth0 smooth1 smooth ""}}
+ addUserKnob {41 color T Noise.color}
+ addUserKnob {12 n_p1 l "point 1" +HIDDEN}
+ n_p1 {100 400}
+ addUserKnob {19 n_color0 l "color 0" +HIDDEN}
+ n_color0 {0 0 0 0}
+ addUserKnob {12 n_p0 l "point 0" +HIDDEN R 0 100}
+ n_p0 {100 100}
+}
+ Input {
+  inputs 0
+  name Input1
+  xpos 299
+  ypos -18
+ }
+ Noise {
+  opacity 100
+  zoffset {{parent.zoffset i}}
+  center {1024 778}
+  ramp {{parent.n_ramp i x1 0}}
+  p1 {{parent.n_p1.x i} {parent.n_p1.y i}}
+  color0 {{parent.n_color0.r i} {parent.n_color0.g i} {parent.n_color0.b i} {parent.n_color0.a i}}
+  p0 {{parent.n_p0.x i} {parent.n_p0.y i}}
+  name Noise
+  selected true
+  xpos 299
+  ypos 22
+ }
+ Output {
+  name Output1
+  xpos 299
+  ypos 122
+ }
+end_group

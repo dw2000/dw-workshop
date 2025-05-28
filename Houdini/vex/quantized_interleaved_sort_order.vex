@@ -1,0 +1,26 @@
+
+float float_prim_vtx = vertexprimindex(0, i@vtxnum);
+float prim_u = float_prim_vtx / (primvertexcount(0, i@primnum) - 1);
+
+float quantization_factor = chi("quantization_factor");
+
+prim_u = max(0, prim_u - 0.000001);  // forcing the 1.0 value down to the next level
+
+f@prim_u = prim_u;
+
+float new_u = prim_u;
+
+if (prim_u > 0.5)
+    new_u = (1 - prim_u);
+
+int sort_order = (new_u - new_u % (1/quantization_factor)) * quantization_factor;
+
+
+if (prim_u > 0.5) {
+    sort_order *= 2;
+    sort_order += 1;}
+else
+    sort_order *= 2;
+
+
+i@sort_order = sort_order;

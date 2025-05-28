@@ -1,0 +1,42 @@
+
+
+
+/*
+ This code gives a rough volume approximation of bubbles or droplets that increase in overall size as they merge together.
+  For example, given two particles of pscale=1:
+if they are not intersecting, they'll retain pscale=1.
+  if they are in the exact same position, each will be set to pscale=1.25992, which gives twice as large a spherical volume.
+  if they are partially intersecting, each sphere's pscale will adjusted to add additional volume equivalent to its portion lost to the interesection where the bubbles/droplets are merging.
+
+*/
+
+vector current_P = v@P;
+float current_radius = f@pscale;
+
+/* set max_points to something high to find all points, or set it to something low if you have millions of points and want a less accurate but faster computaion.
+*/
+ int max_points = chi("max_points");
+
+int found_points[] = pcfind_radius(0, "P", "pscale", 1, current_P, current_radius, max_points);
+
+float accum_volume = 0;
+ float found_radius;
+vector found_P;
+vector found_dir;
+vector intersect_center;
+float half_slice_angle;
+float trimmed_radial_dist;
+float facet_radial_dist;
+
+foreach (int found_point; found_points) {
+found_radius = point(0, "pscale", found_point);
+found_P = point(0, "P", found_point);
+found_dir = normalize(found_P - current_P);
+ intersect_center = ((current_P + found_dir * current_radius) + (found_P - found_dir * found_radius)) / 2.0;
+trimmed_radial_dist = length(intersect_center - current_P);
+ half_slice_angle = acos(trimmed_radial_dist / current_radius);
+ facet_radial_dist = current_radius * sin(half_slice_angle);
+ accum_volume += 2.0 * (4.0/3.0) * pow(current_radius, 3) * half_slice_angle - PI * pow(facet_radial_dist, 2) * trimmed_radial_dist / 3.0;
+}
+f@pscale = pow((accum_volume * (3.0/4.0) / PI), (1.0/3.0));
+//f@test_volume = (4.0/3.0) * PI * pow(f@pscale, 3);

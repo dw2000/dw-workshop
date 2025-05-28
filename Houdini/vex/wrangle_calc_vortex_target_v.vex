@@ -1,0 +1,46 @@
+float funnel_radius;
+
+//funnel_radius  = 0.66*max(0.01, chf("funnel_radius", f@Time + lerp(0, -0.42, rand(414.53 + i@id)))) * fit01(pow(v@noise_map.z, 1), 0.7, 1);  
+funnel_radius  = 0.66*max(0.01, chf("funnel_radius", f@Time + lerp(0-0.167-0.125, -0.42-0.167-0.125, rand(414.53 + i@id)))) * fit01(pow(v@noise_map.z, 1), 0.7, 1);  
+
+float air_resist = chf("airresist");
+air_resist *= fit01(pow(rand(9.321 + @id), 0.5), 0.15, 1);
+vector center;
+
+float rnd = rand(194.13 + i@id);
+if (rnd < 0.5)
+    rnd = -pow(abs(fit01(rnd, -1, 1)), 0.25);
+else
+    rnd = pow(abs(fit01(rnd, -1, 1)), 0.25);
+rnd = fit(rnd, -1, 1, 0, 1);
+
+
+center = lerp(point(1, "P", 0), point(1, "P", 1), rnd);
+
+vector to = center - v@P;
+float dist = length(to);
+to = normalize(to);
+vector up = set(0,1,0);
+
+
+float rel_bounds = fit(v@P.y, 0, 120*0.66, 0, 1);
+f@rel_Y_box = rel_bounds;
+
+vector around = normalize(cross(to, up));
+
+//to = lerp(to, normalize(cross(up, around)), pow(rel_bounds, 3));
+to = normalize(cross(up, around));
+
+float height_mult = chramp("Y_ramp", rel_bounds);
+
+v@dir = around * pow(fit(dist, funnel_radius/3, funnel_radius, 1, 0), 0.5) * chf("orbit_speed") * fit(dist, lerp(0, 39.6*0.75, rand(414.3 + i@id)), 79.2*0.75, 0.75, 2);
+
+
+v@dir += to * pow(fit(dist, funnel_radius/3, funnel_radius, 1, 0), 0.5) * chf("axial_speed") * chf("axial_mult") * fit01(pow(v@noise_map.y, 0.4), 0.25, 1) * fit01(pow(rel_bounds,2), 1, 0.5);
+
+
+v@dir *= height_mult;
+air_resist *= fit01(v@noise_map.x, 0.6, 1);
+
+v@targetv = (v@dir * air_resist + v@targetv * f@airresist) / (air_resist + f@airresist);
+f@airresist += air_resist;

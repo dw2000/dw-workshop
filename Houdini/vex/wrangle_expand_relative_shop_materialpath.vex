@@ -1,0 +1,17 @@
+string material_path = chs("material");
+
+string regex = "(\\\.\\\.\/)+";
+int start_pos [], end_pos [];
+int is_relative = re_find(start_pos, end_pos, regex, material_path);
+
+if (is_relative){
+    int start_index = start_pos[0];
+    int end_index = end_pos[0];
+
+    string head = opfullpath(material_path[start_index : end_index]);
+    string tail = material_path[end_index - 1 :];
+
+    s@shop_materialpath = concat(head, tail);
+}
+else
+    s@shop_materialpath = material_path;

@@ -1,0 +1,13 @@
+Because I keep forgetting:
+
+
+scripts/123.py
+Houdini runs this script when it is started without a scene (.hip) file. 
+Houdini will only run the first 123.py script it finds in the path. This is useful for customizing the empty scene, for example if you want to start every scene with a default lighting rig.
+
+Only Houdini FX runs 123.py. Houdini Core runs houdinicore.py instead of 123.py on startup. 
+
+
+scripts/456.py
+Houdini runs this script whenever a scene file is loaded (including when Houdini starts up with a scene file).
+

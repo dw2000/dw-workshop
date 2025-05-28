@@ -1,0 +1,31 @@
+int max_points = chi("max_points");
+vector P = v@P;
+
+int points[] = pcfind_radius(1, "P", "pscale", 1.0, P, 0.0, max_points);
+
+float current_pscale;
+
+float weight = 0;
+float min_width = chf("min_width");
+
+int points_found = len(points);
+
+foreach (int point_num; points)
+{
+
+    vector line_normal = point(1, "N", point_num);
+    vector current_P = point(1, "P", point_num);
+    vector offset = P - current_P;
+    float N_dot = dot(line_normal, normalize(offset));
+
+
+    if (N_dot > 0) {
+        current_pscale = point(1, "pscale", point_num);
+        weight = max(weight, pow(fit(length(offset), current_pscale*chf("falloff_factor"), (current_pscale+0.00001)*pow(N_dot, 0.5), 1, 0), chf("falloff_exp")));
+    }
+
+
+}
+
+
+f@density = pow((1 - weight), 1);

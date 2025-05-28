@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="DW_Flipbooker" label="DW Flipbooker" icon="OBJ_camera">
+    <script scriptType="python"><![CDATA[import DW_Flipbooking
+
+start_frame = int(hou.hscriptExpression("$RFSTART"))
+end_frame = int(hou.hscriptExpression("$RFEND"))
+
+
+sequence_path = DW_Flipbooking.flipbookit(start_frame, end_frame, dialog=False)   # Write out the image sequence and also return the sequence path to use it for the mp4
+
+
+movie_path = sequence_path.rsplit("/", 2)[0] + "/" + sequence_path.rsplit("/", 1)[-1].rsplit(".", 2)[0] + ".mp4"
+
+
+HFS = hou.hscriptExpression("$HFS")  # The local Houdini install path
+fps = str(hou.fps())  
+bitrate = "15000000"
+
+import subprocess
+cmd = HFS + "/bin/hffmpeg -f image2 -r " + fps + " -start_number " + str(start_frame) + " -y -i " + sequence_path.replace("$F", "%0").rsplit(".", 1)[0] + "d." + sequence_path.rsplit(".", 1)[-1] + " -c:v libopenh264 -pix_fmt yuv420p -allow_skip_frames 1 -b " + bitrate + " " + movie_path
+
+print("Converting to mp4.")
+
+process = subprocess.run(cmd, capture_output=True)
+
+# use the following if you need to debug the mp4 conversion:
+#print(process.stderr.decode())
+]]></script>
+  </tool>
+</shelfDocument>

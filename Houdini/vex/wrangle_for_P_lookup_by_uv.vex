@@ -1,0 +1,36 @@
+string partition_attrib = chs("partition_attrib");
+string uv_attrib = chs("uv_attrib");
+int partition_attrib_type = primattribtype(0, partition_attrib);
+string uv_attrib_class = attribclass(0, uv_attrib);
+string group_mask;
+vector point_uv;
+
+
+// for no attribute or missing attribute
+if (partition_attrib_type == -1) {
+    group_mask = "";
+}
+
+
+// for an integer attribute
+if (partition_attrib_type == 0) {
+    int partition = attrib(0, "prim", partition_attrib, i@primnum);
+    group_mask = concat("\@", partition_attrib, "=", itoa(partition));
+}
+
+
+// for a string attribute
+if (partition_attrib_type == 2) {
+    string partition = attrib(0, "prim", partition_attrib, i@primnum);
+    group_mask = concat("\@", partition_attrib, "=", partition);
+}
+
+
+if (uv_attrib_class == "vertex")
+    point_uv = vertex(0, uv_attrib, pointvertex(0, i@ptnum));
+
+if (uv_attrib_class == "point")
+    point_uv = point(0, uv_attrib, i@ptnum);
+     
+
+@P = uvsample(1, group_mask, "P", uv_attrib, point_uv);  
