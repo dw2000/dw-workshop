@@ -1,3 +1,10 @@
+#
+#
+# Publish Anything is for publishing any Houdini node.
+# It also requires OPmenu.xml for right click publishing functionality, and /scripts/externaldragdrop.py for drag and drop node importing.
+#
+#
+
 import os
 import re
 import hou
