@@ -11,3 +11,5 @@ Only Houdini FX runs 123.py. Houdini Core runs houdinicore.py instead of 123.py 
 scripts/456.py
 Houdini runs this script whenever a scene file is loaded (including when Houdini starts up with a scene file).
 
+
+https://www.sidefx.com/docs/houdini/hom/locations.html

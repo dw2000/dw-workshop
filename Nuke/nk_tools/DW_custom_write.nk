@@ -12,8 +12,6 @@ Write {
  checkHashOnRead false
  version 1
  ocioColorspace scene_linear
- display ACES
- view ACEScg_ArriRec709_CG
  beforeRender nuke.thisNode().knob('file').setValue(nuke.thisNode().knob('output_path').evaluate())
  beforeFrameRender nuke.thisNode().knob('file').setValue(nuke.thisNode().knob('output_path').evaluate())
  name Write1
