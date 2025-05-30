@@ -6,46 +6,73 @@
  a single file. -->
 
   <tool name="DW_Node_Colors" label="DW Node Colors" icon="SOP_python">
-    <script scriptType="python"><![CDATA[# This script changes keyframed nodes to green and nodes with expressions to blue/green so that they are more obvious in large networks.
+    <script scriptType="python"><![CDATA[#
+# DW Node Colors
+# This script changes keyframed nodes to green and nodes with expressions to blue/green so that they are more obvious in large networks.
 # Green takes precedent over blue/green if both keyframes and expressions exist on the same node.
+#
 
 import hou
 
-
-parms_to_check = []
-
-# Search through all nodes
 for node in hou.node("/").allSubChildren():
 
-    # Check if the node is already green. 
-    if node.color() != hou.Color((0.3, 0.65, 0.3)):
+    # Run on every parm of every node so that any previously-existing animation will be marked with a node color change.
+    for parm_tuple in node.parmTuples():
 
-        for parm_tuple in node.parmTuples():
-            if parm_tuple.isTimeDependent():
+        if parm_tuple.isTimeDependent():
+
+            green = hou.Color((0.3, 0.65, 0.3))
+            blue_green = hou.Color((0.275, 0.55, 0.55))
+
+            # Check if the node is already green. 
+            if node.color() != green:
 
                 value_data = parm_tuple.valueAsData()
 
-                for each in value_data:
+                # First, deal with nodes that simply have a single dictionary
+                if isinstance(value_data, dict):
+                    type = list(value_data.keys())[0]
 
-                    if isinstance(each, dict):
-                        type = list(each.keys())[0]
+                    if type == "keyframes":
+                        try:
+                            # change to green
+                            node.setColor(green)
+                                                        
+                        except:
+                            pass
 
-                        if type == "keyframes":
-                            try:
-                                # change to green
-                                node.setColor(hou.Color((0.3, 0.65, 0.3)))
-                                break
-                              
-                            except:
-                                pass
+                    elif type == "expression":
+                        try:
+                            # change to blue/green
+                            node.setColor(blue_green)
+                        except:
+                            pass
 
-                        elif type == "expression":
-                            try:
-                                # change to blue/green
-                                node.setColor(hou.Color((0.275, 0.55, 0.55)))
-                            except:
-                                pass
+                # Next deal with nodes that have a list of dictionaries
+                else:            
+                    for each in value_data:
 
+                        if isinstance(each, dict):
+                            type = list(each.keys())[0]
+
+                            if type == "keyframes":
+                                try:
+                                    # change to green
+                                    node.setColor(green)
+                                    break
+                                    
+                                except:
+                                    pass
+
+                            elif type == "expression":
+                                try:
+                                    # change to blue/green
+                                    node.setColor(blue_green)
+                                except:
+                                    pass
+                                    
+
+# For newly-created nodes and previously-created nodes to automatically change color when keyframed you will need to add callback scripts to a /scripts/OnCreated.py and /scripts/OnLoaded.py
 
 ]]></script>
   </tool>

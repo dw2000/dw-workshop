@@ -76,3 +76,13 @@ node.addEventCallback((hou.nodeEventType.ParmTupleAnimated, ), maybeSetNodeColor
 
 
 
+
+
+
+
+
+
+
+
+
+
