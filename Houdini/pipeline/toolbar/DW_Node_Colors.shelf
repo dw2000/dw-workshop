@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="DW_Node_Colors" label="DW Node Colors" icon="SOP_python">
+    <script scriptType="python"><![CDATA[# This script changes keyframed nodes to green and nodes with expressions to blue/green so that they are more obvious in large networks.
+# Green takes precedent over blue/green if both keyframes and expressions exist on the same node.
+
+import hou
+
+
+parms_to_check = []
+
+# Search through all nodes
+for node in hou.node("/").allSubChildren():
+
+    # Check if the node is already green. 
+    if node.color() != hou.Color((0.3, 0.65, 0.3)):
+
+        for parm_tuple in node.parmTuples():
+            if parm_tuple.isTimeDependent():
+
+                value_data = parm_tuple.valueAsData()
+
+                for each in value_data:
+
+                    if isinstance(each, dict):
+                        type = list(each.keys())[0]
+
+                        if type == "keyframes":
+                            try:
+                                # change to green
+                                node.setColor(hou.Color((0.3, 0.65, 0.3)))
+                                break
+                              
+                            except:
+                                pass
+
+                        elif type == "expression":
+                            try:
+                                # change to blue/green
+                                node.setColor(hou.Color((0.275, 0.55, 0.55)))
+                            except:
+                                pass
+
+
+]]></script>
+  </tool>
+</shelfDocument>
