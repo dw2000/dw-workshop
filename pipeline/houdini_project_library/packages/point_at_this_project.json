@@ -1,0 +1,22 @@
+{
+    "hpath" : 
+    [
+        {
+            "value" : "$HOUDINI_PACKAGE_PATH/..",
+            "method" : "prepend"
+        },
+        {
+            "value" : "$HOUDINI_PACKAGE_PATH/../../../../../global_pipeline/houdini_project_library",
+            "method" : "append"
+        },
+        {
+            "value" : "$HOUDINI_PACKAGE_PATH/../../../../../local_pipeline/houdini_project_library",
+            "method" : "append"
+        }
+    ]
+}
+
+
+
+
+

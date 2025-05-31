@@ -10,7 +10,7 @@ var grandparentDirectoryName = pathParts[pathParts.length - 3];
 
 link = Shell.CreateShortcut(currentDirectory + "\\" + grandparentDirectoryName + "_Houdini_" + userName + ".lnk");
 link.WorkingDirectory = currentDirectory;
-link.Description = "Starts Houdini in a pipeline environment";
+link.Description = "Starts Houdini in a pipelined environment";
 link.IconLocation = currentDirectory + "\\Houdini.ico,0";
 link.TargetPath = currentDirectory + "\\start_Windows_Houdini_in_this_job.bat";
 link.WindowStyle = 7;
