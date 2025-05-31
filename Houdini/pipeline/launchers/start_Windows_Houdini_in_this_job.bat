@@ -1,6 +1,6 @@
 
 @ECHO Pointing to this job's Package directory:
-set HOUDINI_PACKAGE_DIR=%cd%\..\houdini_project_library\packages;%HOUDINI_PACKAGE_DIR%
+set HOUDINI_PACKAGE_DIR=%cd%\..\packages;%HOUDINI_PACKAGE_DIR%
 @ECHO(
 @ECHO(
 @ECHO Starting Houdini:
