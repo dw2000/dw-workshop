@@ -5,11 +5,18 @@
 node = kwargs["node"]
 
 
-# While we're here let's change the default res from 720 to 1080
+# While we're here let's change the starting res from 720 to 1080
 node.parmTuple("res").set((1920, 1080))
 
+#
+# The callback_script script will be executed whenever the background image parameter is changed.
+# The script is set as the callback for the vm_background parameter and will get stored in all newly created camera nodes in the .hip file.
+#
+# You could also set this up in an alternate method where the callback would be stored on disk in a Python module and  
+# then have it get added to all camera nodes at scene load time using both a cam_OnCreated.py and cam_OnLoaded.py 
+# (More flexible and less destructive but slightly more complex to set up.)
+#
 
-# The script we will be using as a callback whenever the background image is changed:
 callback_script = '''
 import os, re
 
