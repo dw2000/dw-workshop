@@ -1,3 +1,8 @@
+#
+# Camera initializer by David Wanger
+# www.dw-workshop.com
+#
+
 
 # To set up this callback put it in a /scripts/obj directory that is in your HOUDINI_PATH
 
