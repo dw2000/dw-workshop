@@ -1,13 +1,12 @@
 import hou
 import os
 import re
+import getpass
 import DW_JobFileStructure
 import DW_SaveFileWindow
 
 
-# to do on the saver: export username and notes somehow to json
-# make sure version-up also writes user name to wherever
-# auto-load current shot path
+# to do: auto-load current shot path
 
 
 # DW_JobFileStructure.folders_dict is a dictionairy of all the numbered/named shot or asset folders that we might want to save a file into.
@@ -70,28 +69,43 @@ def getFileExt():
     
 
 
+
+def saveToJson(output_dictionary):   # Store various data like notes and username to a json file
+    json_file_name = output_dictionary["output_dir"] + "/" + output_dictionary["base_name"] + "." + output_dictionary["file_ext"] + ".json"
+    version_list = [output_dictionary]
+    if os.path.exists(json_file_name):
+        version_list += DW_JobFileStructure.readObjectFromJson(json_file_name)
+
+    DW_JobFileStructure.writeObjectToJson(version_list, json_file_name)
+
+
+
+
 def save():
 
     job_data = DW_JobFileStructure.LookupData()
 
     file_ext = getFileExt()
 
-    save_file_path_components = DW_SaveFileWindow.open_save_dialog(job_data, file_ext)  # Returns the directory and filename separate    
-    if save_file_path_components is not None:
+    output_dictionary = DW_SaveFileWindow.open_save_dialog(job_data, file_ext)  # Returns the info needed to save and log the file   
 
-        save_file_path = save_file_path_components[0] + "/" + save_file_path_components[1]
-        print(save_file_path) 
+    if output_dictionary is not None:
+        if "output_dir" in output_dictionary.keys():
 
-        # DW_JOB was set when opening Houdini and isn't ever expected to change.
-        DW_JobFileStructure.setJobVariables(os.environ["DW_JOB"], save_file_path)
+            save_file_path = output_dictionary["output_dir"] + "/" + output_dictionary["output_file"]
+            print(save_file_path) 
 
-        if not os.path.exists(save_file_path_components[0]):
-            os.makedirs(save_file_path_components[0])
+            # DW_JOB was set when opening Houdini and isn't ever expected to change.
+            DW_JobFileStructure.setJobVariables(os.environ["DW_JOB"], save_file_path)
 
-        # this next line is the slow part:
-        hou.hipFile.save(save_file_path)
+            if not os.path.exists(output_dictionary["output_dir"]):
+                os.makedirs(output_dictionary["output_dir"])
 
-        updateTitleBar()
+            # this next line is the slow part:
+            hou.hipFile.save(save_file_path)
+
+            saveToJson(output_dictionary)
+            updateTitleBar()
 
 
 
@@ -103,7 +117,7 @@ def versionUp():
     if test is not None:
 
         split_path = current_hip.rsplit("/", 1)
-        save_dir = split_path[0]                         # C:/Dropbox/_work/jobs/machine_testing/films/the_drop/shots/0010/scenes/fx/main
+        output_dir = split_path[0]                         # C:/Dropbox/_work/jobs/machine_testing/films/the_drop/shots/0010/scenes/fx/main
                                                          # //ditto/jobs/dw_test_0012/films/main_film/shots/0010/scenes/tracking/main
                                                          
         current_file = split_path[1]                     # main_film_0010_fx_theDrop_v058_wange.hiplc
@@ -112,16 +126,13 @@ def versionUp():
         split_file = re.split(r'_v\d{3}', current_file)  # ['main_film_0010_fx_theDrop', '_wange.hiplc']
         file_left_side = split_file[0]
 
-        #user = os.environ["USER"]                        # divad.regnaw
-
         file_ext = getFileExt()
 
         # any comments in the file name will be stripped out
-        #file_right_side = "_" + user + "." + file_ext
         file_right_side = "." + file_ext
 
 
-        file_list = os.listdir(save_dir)
+        file_list = os.listdir(output_dir)
         file_list = [each for each in file_list if "." in each[1:-1] and each.rsplit(".", 1)[1] == file_ext]
         file_list = [each for each in file_list if "_v" in each and re.split(r'_v\d{3}', each)[0] == split_file[0]]
 
@@ -133,17 +144,26 @@ def versionUp():
         print("Incrementing version number and saving...")
         hou.ui.setStatusMessage("Incrementing version number and saving...")
         "Incrementing version number and saving..."
-        new_file = file_left_side + "_" + new_version_string + file_right_side
-        new_full_path = save_dir + "/" + new_file
+        output_file = file_left_side + "_" + new_version_string + file_right_side
+        new_full_path = output_dir + "/" + output_file
 
         hou.putenv("DW_VERSION", new_version_string)
 
         # this next line is the slow part:
         hou.hipFile.save(new_full_path)
 
-        print("Saved to: " + new_file)
-        hou.ui.setStatusMessage("Saved to: " + new_file)
-        
+        print("Saved to: " + output_file)
+        hou.ui.setStatusMessage("Saved to: " + output_file)
+   
+        output_dictionary = {}
+        output_dictionary["file_ext"] = file_ext
+        output_dictionary["output_dir"] = output_dir
+        output_dictionary["output_file"] = output_file
+        output_dictionary["base_name"] = file_left_side
+        output_dictionary["version"] = max_version + 1
+        output_dictionary["user"] = getpass.getuser() 
+        saveToJson(output_dictionary)     
+
         updateTitleBar()
 
     else:

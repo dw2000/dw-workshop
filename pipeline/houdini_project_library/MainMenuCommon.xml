@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<mainMenu>
+  <menuBar>
+    <!-- ======================== File Menu ============================== -->
+    <subMenu id="file_menu">
+    <label>File</label>
+
+
+
+      <scriptItem id="h.DW_loader">
+          <label>DW Loader...</label>
+          <insertBefore>h.save</insertBefore>
+              <scriptCode><![CDATA[import DW_SaveLoad
+
+DW_SaveLoad.load()
+          ]]></scriptCode>
+      </scriptItem>
+
+
+
+      <scriptItem id="h.DW_saver">
+          <label>DW Saver...</label>
+          <insertBefore>h.save</insertBefore>
+              <scriptCode><![CDATA[import DW_SaveLoad
+
+DW_SaveLoad.save()
+          ]]></scriptCode>
+      </scriptItem>
+
+
+
+      <scriptItem id="h.DW_versionUp">
+          <label>DW Version Up</label>
+          <insertBefore>h.save</insertBefore>
+              <scriptCode><![CDATA[import DW_SaveLoad
+
+DW_SaveLoad.versionUp()
+          ]]></scriptCode>
+      </scriptItem>   
+
+
+
+      <separatorItem id="DW_sep_1">
+      <insertBefore>h.save</insertBefore>
+      </separatorItem>
+
+
+
+    </subMenu>
+  </menuBar>
+</mainMenu>

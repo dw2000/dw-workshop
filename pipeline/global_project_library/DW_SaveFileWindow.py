@@ -1,4 +1,4 @@
-
+import getpass
 
 from PySide2.QtWidgets import (
     QApplication, QDialog, QVBoxLayout, QHBoxLayout,
@@ -17,7 +17,6 @@ class SaveFileDialog(QDialog):
         #self.setMinimumHeight(600)
 
         self.job_data = job_data
-        self.file_ext = file_ext
 
         self.depth = self._get_dict_depth(self.job_data.folders_dict)    
 
@@ -29,8 +28,8 @@ class SaveFileDialog(QDialog):
         # Custom user role to tag menu items to ignore.
         self.ignoreMe = Qt.UserRole
 
-        self.output_dir = ""
-        self.output_file = ""
+        self.output_dictionary = {} # this will hold all the output data needed to save and log the file
+        self.output_dictionary["file_ext"] = file_ext   
 
         self._create_layouts()
         self._connect_signals()
@@ -145,9 +144,14 @@ class SaveFileDialog(QDialog):
 
         self.notes_edit = QLineEdit(self)
         self.notes_edit.setPlaceholderText("Enter any notes here.")
-        self.notes_edit.setMaxLength(75)        # Windows defaults to a max path length of 260, so best to control this dynamically later.
+        self.notes_edit.setMaxLength(100)        
         self.notes_edit.hide()
-        #self.notes_edit.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)           
+        #self.notes_edit.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)        
+
+        regex_letters = QRegExp(r"[^'\"\\#|;\x00-\x1F]*")   # Dissallow some troublesome characters.
+        input_validator = QRegExpValidator(regex_letters, self.notes_edit)
+        self.notes_edit.setValidator(input_validator)
+
         task_layout.addWidget(self.notes_edit)
     
         main_layout.addLayout(notes_layout)
@@ -195,7 +199,7 @@ class SaveFileDialog(QDialog):
 
     def updateTaskMenu(self, add_item=None):   # The task menu queries external data in order to dynamically change context-wise.
         self.task_combo.clear()
-        task_list = self.job_data.updateTaskList(search_dir=self.output_dir)
+        task_list = self.job_data.updateTaskList(search_dir=self.output_dictionary["output_dir"])
 
         if add_item is not None:
             task_list = self.job_data.updateTaskList(add_item=add_item)
@@ -344,9 +348,9 @@ class SaveFileDialog(QDialog):
     def _update_output_path(self):  # Just regenerating it from scratch every time.
         self.save_button.setEnabled(False)
         # Start with the project file path:
-        self.output_dir = list(self.job_data.folders_dict.keys())[0]
+        self.output_dictionary["output_dir"] = list(self.job_data.folders_dict.keys())[0]
 
-        self.output_file = ""  # We'll build the file name in parellel with the dir, then combine them.
+        self.output_dictionary["output_file"] = ""  # We'll build the file name in parellel with the dir, then combine them.
 
         keep_going = True
 
@@ -356,44 +360,50 @@ class SaveFileDialog(QDialog):
             if each.isVisible() is True:   
                 if each.itemData(each.currentIndex(), self.ignoreMe) is None:
                     current_text = each.currentText()
-                    self.output_dir += "/" + current_text
+                    self.output_dictionary["output_dir"] += "/" + current_text
                 else:
                     keep_going = False
 
 
 
         if keep_going:
-            self.output_file += current_text
+            self.output_dictionary["output_file"] += current_text
             if self.step_combo.isVisible() is True:
                 if self.step_combo.itemData(self.step_combo.currentIndex(), self.ignoreMe) is None:
-                    self.output_dir += "/" + self.job_data.work_dir
+                    self.output_dictionary["output_dir"] += "/" + self.job_data.work_dir
                     current_text = self.step_combo.currentText()
-                    self.output_dir += "/" + current_text
+                    self.output_dictionary["output_dir"] += "/" + current_text
                 else:
                     keep_going = False
 
         if keep_going:
-            self.output_file += "_" + current_text
+            self.output_dictionary["output_file"] += "_" + current_text
             if self.task_combo.isVisible() is True:
                 if self.task_combo.itemData(self.task_combo.currentIndex(), self.ignoreMe) is None:
                     current_text = self.task_combo.currentText()
-                    self.output_dir += "/" + current_text
-                    self.output_file += "_" + current_text    
-                    latest_version = self.job_data.getLatestVersion(self.output_dir + "/" + self.output_file + "_v000" + "." + self.file_ext)
-                    self.output_file += "_v" + str(latest_version + 1).rjust(3, "0") + "." + self.file_ext  
+                    self.output_dictionary["output_dir"] += "/" + current_text
+                    self.output_dictionary["output_file"] += "_" + current_text   
+                    self.output_dictionary["base_name"] = self.output_dictionary["output_file"]
 
+                    latest_version = self.job_data.getLatestVersion(self.output_dictionary["output_dir"] + "/" + self.output_dictionary["output_file"] + "_v000" + "." + self.output_dictionary["file_ext"])
+                    self.output_dictionary["output_file"] += "_v" + str(latest_version + 1).rjust(3, "0") + "." + self.output_dictionary["file_ext"]  
+                    self.output_dictionary["version"] = latest_version + 1
+                    
             # We only form the full file path and turn on the Save button if we were able to get this far and actually have a full file path.
-            self.output_preview.setText(self.output_dir + "/" + self.output_file + "    ")
+            self.output_preview.setText(self.output_dictionary["output_dir"] + "/" + self.output_dictionary["output_file"] + "    ")
             self.save_button.setEnabled(True)
 
         else:
-            self.output_preview.setText(self.output_dir + "    ")
+            self.output_preview.setText(self.output_dictionary["output_dir"] + "    ")
 
-        #print("output path length: " + str(len(self.output_dir + "/" + self.output_file)))
 
 
     @Slot()
     def _on_save_clicked(self):
+
+        self.output_dictionary["user"] = getpass.getuser()      
+        self.output_dictionary["notes"] = self.notes_edit.text()
+
         self.accept() # QDialog built-in slot to close with accept code
 
 
@@ -500,7 +510,7 @@ def open_save_dialog(job_data, file_ext):
 
     if result == QDialog.Accepted:
         print("Saving...")
-        return [dialog.output_dir, dialog.output_file]
+        return dialog.output_dictionary
     elif result == QDialog.Rejected:
         print("Save operation cancelled.")
         return None

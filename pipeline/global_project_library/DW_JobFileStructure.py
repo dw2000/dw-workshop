@@ -135,11 +135,11 @@ def setJobVariables(job_name, full_file_path):
 
 
 
-def writeDictToJson(dictionary, file_path, backup_copy=True):
+def writeObjectToJson(obj, file_path, backup_copy=True):
     try:
         with open(file_path, 'w') as json_file:
-            json.dump(dictionary, json_file, indent=4)
-        print(f"Dictionary written to '{file_path}'")
+            json.dump(obj, json_file, indent=4)
+        #print(f"Written to '{file_path}'")
 
         if backup_copy:  # Make a backup copy, good for when this is a non-versioned file that will be re-written to multiple times.
             try:
@@ -155,13 +155,14 @@ def writeDictToJson(dictionary, file_path, backup_copy=True):
 
 
 
-def readDictFromJson(file_path):
+def readObjectFromJson(file_path):
+
     try:
         with open(file_path, 'r') as json_file:
-            loaded_dictionary = json.load(json_file)
-        print(f"Dictionary loaded from '{file_path}':")
+            loaded_obj = json.load(json_file)
+        #print(f"Loaded from '{file_path}':")
 
-        return loaded_dictionary
+        return loaded_obj
 
     except FileNotFoundError:
         print(f"Error: The file '{file_path}' was not found.")
@@ -169,6 +170,8 @@ def readDictFromJson(file_path):
         print(f"Error decoding JSON from '{file_path}': {e}")
     except IOError as e:
         print(f"Error reading file '{file_path}': {e}")
+
+
 
 
     
