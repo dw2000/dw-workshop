@@ -87,7 +87,7 @@ def save():
 
     file_ext = getFileExt()
 
-    output_dictionary = DW_SaveFileWindow.open_save_dialog(job_data, file_ext)  # Returns the info needed to save and log the file   
+    output_dictionary = DW_SaveFileWindow.open_save_dialog(job_data, file_ext, current_file_path=hou.hipFile.path())  # Returns the info needed to save and log the file   
 
     if output_dictionary is not None:
         if "output_dir" in output_dictionary.keys():
