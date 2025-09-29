@@ -1,0 +1,495 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="DW_texture_mask_scatter" label="DW Texture Mask Scatter" icon="SOP_texturemaskpaint">
+    <toolMenuContext name="network">
+      <contextOpType>Sop/sphere</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'subnet' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4 (Sop/subnet)
+set _obj_geo1_DW_texture_mask_scatter4 = `run("opadd -e -n -v subnet DW_texture_mask_scatter4")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_geo1_DW_texture_mask_scatter4
+opspareds '    parm {         name    "label1"         baseparm         label   "Input #1 Label"         invisible         export  all     }     parm {         name    "label2"         baseparm         label   "Input #2 Label"         invisible         export  all     }     parm {         name    "label3"         baseparm         label   "Input #3 Label"         invisible         export  all     }     parm {         name    "label4"         baseparm         label   "Input #4 Label"         invisible         export  all     }     group {         name    "stdswitcher"         label   "Scatter"         grouptag { "visibletabs" "11" }          parm {             name    "generateby"             label   "Generate"             type    ordinal             default { "bydensity" }             menu {                 "bydensity"         "By Density"                 "countperprimitive" "Count per Primitive"                 "texturespace"      "In Texture Space"             }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "indepvoxel"             label   "Scatter on Voxels Independently"             type    toggle             default { "off" }             hidewhen "{ generateby != bydensity }"             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "forcetotal"             label   "Force Total Count"             type    toggle             nolabel             joinnext             default { "on" }             disablewhen "{ indepvoxel == 1 }"             hidewhen "{ generateby != bydensity }"             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "npts"             label   "Force Total Count"             type    intlog             default { "1000" }             disablewhen "{ forcetotal == 0 } { indepvoxel == 1 }"             hidewhen "{ generateby != bydensity }"             range   { 1 100000 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "densityscale"             label   "Density Scale"             type    log             default { "100000" }             disablewhen "{ generateby == bydensity forcetotal == 1 indepvoxel == 0 }"             hidewhen "{ generateby == countperprimitive }"             range   { 0.1 10000 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "units" "m-2" }         }         parm {             name    "usedensityattrib"             label   "Use Density Attribute"             type    toggle             nolabel             joinnext             default { "off" }             hidewhen "{ generateby != bydensity }"             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "densityattrib"             label   "Density Attribute"             type    string             default { "density" }             disablewhen "{ usedensityattrib == 0 }"             hidewhen "{ generateby != bydensity }"             menureplace {                 [ "opmenu -l -a scatter1 densityattrib" ]             }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "useareaattrib"             label   "Override Prim Area"             type    toggle             nolabel             joinnext             default { "off" }             hidewhen "{ generateby != bydensity }"             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "areaattrib"             label   "Override Prim Area"             type    string             default { "area" }             disablewhen "{ useareaattrib == 0 }"             hidewhen "{ generateby != bydensity }"             menureplace {                 [ "opmenu -l -a scatter1 areaattrib" ]             }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "useareaforvolumes"             label   "Use Area for 2D Volumes"             type    toggle             default { "on" }             disablewhen "{ forcetotal == 1 indepvoxel == 0 }"             hidewhen "{ generateby != bydensity }"             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "usedensitytexture"             label   "Use Density Texture"             type    toggle             nolabel             joinnext             default { "off" }             hidewhen "{ generateby != texturespace }"             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "densitytexture"             label   "Density Texture"             type    file             default { "default.pic" }             disablewhen "{ usedensitytexture == 0 }"             hidewhen "{ generateby != texturespace }"             menureplace {                 [ "opmenu -l -a scatter1 densitytexture" ]             }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "uvattrib"             label   "UV Attribute"             type    string             default { "uv" }             hidewhen "{ generateby != texturespace }"             menureplace {                 [ "opmenu -l -a scatter1 uvattrib" ]             }             parmtag { "autoscope" "0000000000000000" }             parmtag { "sidefx::attrib_access" "read" }         }         parm {             name    "primcountattrib"             label   "Count per Prim Attribute"             type    string             default { "count" }             hidewhen "{ generateby != countperprimitive }"             menureplace {                 [ "opmenu -l -a scatter1 primcountattrib" ]             }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "useemergencylimit"             label   "Use Max Points"             type    toggle             nolabel             joinnext             default { "on" }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "emergencylimit"             label   "Max Point Limit"             type    intlog             default { "5e+06" }             disablewhen "{ useemergencylimit == 0 }"             range   { 1000 1e+07 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "seed"             label   "Global Seed"             type    float             default { "20" }             range   { 0 100 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "sidefx::slider" "snap_to_int" }         }         parm {             name    "overrideprimseed"             label   "Override Primitive Seed"             type    toggle             nolabel             joinnext             default { "off" }             hidewhen "{ generateby == texturespace }"             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "primseedattrib"             label   "Primitive Seed Attribute"             type    string             default { "primid" }             disablewhen "{ overrideprimseed == 0 }"             hidewhen "{ generateby == texturespace }"             menureplace {                 [ "opmenu -l -a scatter1 primseedattrib" ]             }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "randomizeorder"             label   "Randomize Point Order"             type    toggle             default { "on" }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "relaxpoints"             label   "Relax Points"             type    toggle             nolabel             joinnext             default { "off" }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "relaxiterations"             label   "Relax Iterations"             type    integer             default { "10" }             disablewhen "{ relaxpoints == 0 }"             range   { 0! 100 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "usegeometricnormals"             label   "Use Geometric Normals"             type    toggle             default { "off" }             disablewhen "{ relaxpoints == 0 }"             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "scaleradiiby"             label   "Scale Radii By"             type    float             default { "1" }             disablewhen "{ relaxpoints == 0 }"             range   { 0! 2 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "usemaxradius"             label   "Use Max Relax Radius"             type    toggle             nolabel             joinnext             default { "on" }             disablewhen "{ relaxpoints == 0 }"             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "maxradius"             label   "Max Relax Radius"             type    float             default { "10" }             disablewhen "{ relaxpoints == 0 } { usemaxradius == 0 }"             range   { 0! 100 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "units" "m-1" }         }     }      group {         name    "stdswitcher_1"         label   "Output Attributes"          parm {             name    "pointattribs"             label   "Point Attributes"             type    string             default { "*" }             menutoggle {                 [ "opmenu -l -a attribtransferbyuv1 pointattribs" ]             }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "sop_input" "1" }         }         parm {             name    "vertattribs"             label   "Vertex Attributes"             type    string             default { "*" }             menutoggle {                 [ "opmenu -l -a attribtransferbyuv1 vertattribs" ]             }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "sop_input" "1" }         }         parm {             name    "primattribs"             label   "Primitive Attributes"             type    string             default { "*" }             menutoggle {                 [ "opmenu -l -a attribtransferbyuv1 primattribs" ]             }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "sop_input" "1" }         }         parm {             name    "detailattribs"             label   "Detail Attributes"             type    string             default { "*" }             menutoggle {                 [ "opmenu -l -a attribtransferbyuv1 detailattribs" ]             }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "sop_input" "1" }         }         parm {             name    "output_source_prim_attributes"             label   "Output Source Prim Attributes"             type    toggle             default { "off" }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "cvex" }         }         parm {             name    "primuv_attribute"             label   "Primuv Attribute"             type    string             default { "sourceprimuv" }             disablewhen "{ output_source_prim_attributes == 0 }"             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "cvex" }         }         parm {             name    "prim_attribute"             label   "Prim Attribute"             type    string             default { "sourceprim" }             disablewhen "{ output_source_prim_attributes == 0 }"             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "cvex" }         }     }  ' $_obj_geo1_DW_texture_mask_scatter4
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_DW_texture_mask_scatter4
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4
+opcf $_obj_geo1_DW_texture_mask_scatter4
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs (Sop/attribvop)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs = `run("opadd -e -n -v attribvop look_up_uv_attribs")`
+oplocate -x `$arg2 + 5.9833699999999999` -y `$arg3 + 2.6785700000000001` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"         grouptag { "sidefx::switcher" "stdswitcher" }          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vexsnippet"             baseparm             label   "Snippet"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }         parm {             name    "vex_exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }         parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }     }      parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "id"         label   "Id"         type    integer         invisible         default { "-1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "output_source_prim_attributes"         label   "Output Source Prim Attributes"         type    toggle         default { "on" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primuv_attribute"         label   "Primuv Attribute"         type    string         default { "sourceprimuv" }         disablewhen "{ output_source_prim_attributes == 0 }"         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "prim_attribute"         label   "Prim Attribute"         type    string         default { "sourceprim" }         disablewhen "{ output_source_prim_attributes == 0 }"         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     } ' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs
+opparm $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs  bindings ( 0 ) groupbindings ( 0 )
+chblockbegin
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs output_source_prim_attributes
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../output_source_prim_attributes")' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs/output_source_prim_attributes
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs primuv_attribute
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../primuv_attribute")' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs/primuv_attribute
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs prim_attribute
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../prim_attribute")' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs/prim_attribute
+chblockend
+opparm -V 20.5.278 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs output_source_prim_attributes ( output_source_prim_attributes ) primuv_attribute ( primuv_attribute ) prim_attribute ( prim_attribute )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs
+opcf $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + 4.4293899999999997` -y `$arg3 + 1.97631` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopglobal1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopglobal1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 29.156300000000002` -y `$arg3 + 0.93943100000000002` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopoutput1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopoutput1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_relbbox1 (Vop/relbbox)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_relbbox1 = `run("opadd -e -n -v relbbox relbbox1")`
+oplocate -x `$arg2 + 8.9519199999999994` -y `$arg3 + -0.692778` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_relbbox1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_relbbox1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_relbbox1
+opuserdata -n '___Version___' -v '' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_relbbox1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_bind1 (Vop/bind)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_bind1 = `run("opadd -e -n -v bind bind1")`
+oplocate -x `$arg2 + 18.313199999999998` -y `$arg3 + 0.377743` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_bind1
+opparm -V 20.5.278 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_bind1 parmname ( uv ) parmtype ( float3 ) overridetype ( on ) useasparmdefiner ( on ) exportparm ( whenconnected ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_bind1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_bind1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_bind1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_vectofloat1 (Vop/vectofloat)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_vectofloat1 = `run("opadd -e -n -v vectofloat vectofloat1")`
+oplocate -x `$arg2 + 12.1852` -y `$arg3 + -0.45225700000000002` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_vectofloat1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_vectofloat1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_vectofloat1
+opuserdata -n '___Version___' -v '' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_vectofloat1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_floattovec1 (Vop/floattovec)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_floattovec1 = `run("opadd -e -n -v floattovec floattovec1")`
+oplocate -x `$arg2 + 15.1852` -y `$arg3 + -0.45225700000000002` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_floattovec1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_floattovec1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_floattovec1
+opuserdata -n '___Version___' -v '' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_floattovec1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1 (Vop/if)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1 = `run("opadd -e -n -v if if1")`
+oplocate -x `$arg2 + 22.903600000000001` -y `$arg3 + -6.1058500000000002` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1
+opcf $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_suboutput1 (Vop/suboutput)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_suboutput1 = `run("opadd -e -n -v suboutput suboutput1")`
+oplocate -x `$arg2 + 23.377800000000001` -y `$arg3 + -1.6834800000000001` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_suboutput1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_suboutput1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_suboutput1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_suboutput1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_suboutput1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_subinput1 (Vop/subinput)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_subinput1 = `run("opadd -e -n -v subinput subinput1")`
+oplocate -x `$arg2 + -2.49804` -y `$arg3 + 0.220274` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_subinput1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_subinput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_subinput1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_subinput1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_subinput1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib1 (Vop/setattrib)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib1 = `run("opadd -e -n -v setattrib setattrib1")`
+oplocate -x `$arg2 + 14.1496` -y `$arg3 + -2.18418` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib1
+opparm $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib1 attrib ( "" )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib1
+opuserdata -n '___Version___' -v '' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib (Vop/parameter)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib = `run("opadd -e -n -v parameter attrib")`
+oplocate -x `$arg2 + 10.180099999999999` -y `$arg3 + -4.25326` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib
+opparm -V 20.5.278 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib parmname ( primuv_attribute ) parmlabel ( 'Primuv Attribute' ) parmtype ( string ) stringdef ( sourceprimuv ) exportcontext ( cvex ) disablewhen ( '{ output_source_prim_attributes == 0 }' )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib2 (Vop/setattrib)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib2 = `run("opadd -e -n -v setattrib setattrib2")`
+oplocate -x `$arg2 + 13.584300000000001` -y `$arg3 + 0.220277` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib2
+opparm $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib2 signature ( i ) attrib ( "" )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib2
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib2
+opuserdata -n '___Version___' -v '' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib2
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib1 (Vop/parameter)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib1 = `run("opadd -e -n -v parameter attrib1")`
+oplocate -x `$arg2 + 10.180099999999999` -y `$arg3 + 1.05027` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib1
+opparm -V 20.5.278 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib1 parmname ( prim_attribute ) parmlabel ( 'Prim Attribute' ) parmtype ( string ) stringdef ( sourceprim ) exportcontext ( cvex ) disablewhen ( '{ output_source_prim_attributes == 0 }' )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_xyzdist1 (Vop/xyzdist)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_xyzdist1 = `run("opadd -e -n -v xyzdist xyzdist1")`
+oplocate -x `$arg2 + 4.0273300000000001` -y `$arg3 + -3.1232600000000001` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_xyzdist1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_xyzdist1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_xyzdist1
+opuserdata -n '___Version___' -v '' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_xyzdist1
+opcf ..
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_parm1 (Vop/parameter)
+set _obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_parm1 = `run("opadd -e -n -v parameter parm1")`
+oplocate -x `$arg2 + 19.636299999999999` -y `$arg3 + -3.4455399999999998` $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_parm1
+opparm -V 20.5.278 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_parm1 parmname ( output_source_prim_attributes ) parmlabel ( 'Output Source Prim Attributes' ) parmtype ( toggle ) toggledef ( on ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_parm1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_parm1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_parm1
+opcf ..
+opcf ..
+opcf $_obj_geo1_DW_texture_mask_scatter4
+opcf $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs
+opcf $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1
+oporder -e suboutput1 subinput1 setattrib1 attrib setattrib2 attrib1 xyzdist1 
+opcf ..
+oporder -e geometryvopglobal1 geometryvopoutput1 relbbox1 bind1 vectofloat1 floattovec1 if1 parm1 
+opcf ..
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_volume (Sop/null)
+set _obj_geo1_DW_texture_mask_scatter4_volume = `run("opadd -e -n -v null volume")`
+oplocate -x `$arg2 + 12.0791` -y `$arg3 + 7.1665099999999997` $_obj_geo1_DW_texture_mask_scatter4_volume
+opspareds '    parm {         name    "copyinput"         baseparm         label   "Copy Input (Note: Input will be still cooked if disabled)"         export  none     }     parm {         name    "cacheinput"         baseparm         label   "Cache Input"         export  none     }     parm {         name    "voxel_size"         label   "Voxel Size"         type    float         default { "0" }         range   { 0 10 }         parmtag { "script_callback_language" "python" }     } ' $_obj_geo1_DW_texture_mask_scatter4_volume
+chblockbegin
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_volume voxel_size
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'bbox(0, D_XSIZE)/volumeres(0,0,0)' $_obj_geo1_DW_texture_mask_scatter4_volume/voxel_size
+chblockend
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_DW_texture_mask_scatter4_volume
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_volume
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_volume
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_scatter1 (Sop/scatter::2.0)
+set _obj_geo1_DW_texture_mask_scatter4_scatter1 = `run("opadd -e -n -v scatter::2.0 scatter1")`
+oplocate -x `$arg2 + 6.1118300000000003` -y `$arg3 + 3.9747300000000001` $_obj_geo1_DW_texture_mask_scatter4_scatter1
+chblockbegin
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 generateby
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../generateby")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/generateby
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 indepvoxel
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../indepvoxel")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/indepvoxel
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 forcetotal
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../forcetotal")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/forcetotal
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 npts
+chkey -t 40 -v 1000 -m 0 -a 0 -A 0 -T a  -F 'ch("../npts")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/npts
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 densityscale
+chkey -t 40 -v 100000 -m 0 -a 0 -A 0 -T a  -F 'ch("../densityscale")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/densityscale
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 usedensityattrib
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../usedensityattrib")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/usedensityattrib
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 densityattrib
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../densityattrib")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/densityattrib
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 useareaattrib
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../useareaattrib")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/useareaattrib
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 areaattrib
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../areaattrib")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/areaattrib
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 useareaforvolumes
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../useareaforvolumes")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/useareaforvolumes
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 usedensitytexture
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../usedensitytexture")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/usedensitytexture
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 densitytexture
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../densitytexture")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/densitytexture
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 uvattrib
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../uvattrib")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/uvattrib
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 primcountattrib
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../primcountattrib")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/primcountattrib
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 useemergencylimit
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../useemergencylimit")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/useemergencylimit
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 emergencylimit
+chkey -t 40 -v 5000000 -m 0 -a 0 -A 0 -T a  -F 'ch("../emergencylimit")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/emergencylimit
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 seed
+chkey -t 40 -v 20 -m 0 -a 0 -A 0 -T a  -F 'ch("../seed")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/seed
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 overrideprimseed
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../overrideprimseed")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/overrideprimseed
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 primseedattrib
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../primseedattrib")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/primseedattrib
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 randomizeorder
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../randomizeorder")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/randomizeorder
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 relaxpoints
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../relaxpoints")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/relaxpoints
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 relaxiterations
+chkey -t 40 -v 10 -m 0 -a 0 -A 0 -T a  -F 'ch("../relaxiterations")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/relaxiterations
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 usegeometricnormals
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../usegeometricnormals")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/usegeometricnormals
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 scaleradiiby
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../scaleradiiby")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/scaleradiiby
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 usemaxradius
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../usemaxradius")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/usemaxradius
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_scatter1 maxradius
+chkey -t 40 -v 10 -m 0 -a 0 -A 0 -T a  -F 'ch("../maxradius")' $_obj_geo1_DW_texture_mask_scatter4_scatter1/maxradius
+chblockend
+opparm -V 20.5.278 $_obj_geo1_DW_texture_mask_scatter4_scatter1 stdswitcher ( 1 1 ) generateby ( generateby ) indepvoxel ( indepvoxel ) forcetotal ( forcetotal ) npts ( npts ) densityscale ( densityscale ) usedensityattrib ( usedensityattrib ) densityattrib ( densityattrib ) useareaattrib ( useareaattrib ) areaattrib ( areaattrib ) useareaforvolumes ( useareaforvolumes ) usedensitytexture ( usedensitytexture ) densitytexture ( densitytexture ) uvattrib ( uvattrib ) primcountattrib ( primcountattrib ) useemergencylimit ( useemergencylimit ) emergencylimit ( emergencylimit ) seed ( seed ) overrideprimseed ( overrideprimseed ) primseedattrib ( primseedattrib ) randomizeorder ( randomizeorder ) relaxpoints ( relaxpoints ) relaxiterations ( relaxiterations ) usegeometricnormals ( usegeometricnormals ) scaleradiiby ( scaleradiiby ) usemaxradius ( usemaxradius ) maxradius ( maxradius )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_DW_texture_mask_scatter4_scatter1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_scatter1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_scatter1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_fix_Z_voxel_size (Sop/xform)
+set _obj_geo1_DW_texture_mask_scatter4_fix_Z_voxel_size = `run("opadd -e -n -v xform fix_Z_voxel_size")`
+oplocate -x `$arg2 + 5.5157100000000003` -y `$arg3 + 5.0012699999999999` $_obj_geo1_DW_texture_mask_scatter4_fix_Z_voxel_size
+chblockbegin
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_fix_Z_voxel_size sz
+chkey -t 40 -v 0.00097656200000000005 -m 0 -a 0 -A 0 -T a  -F 0.000976562/2 $_obj_geo1_DW_texture_mask_scatter4_fix_Z_voxel_size/sz
+chblockend
+opparm -V 20.5.278 $_obj_geo1_DW_texture_mask_scatter4_fix_Z_voxel_size s ( 1 1 sz ) updateaffectednmls ( off )
+chautoscope $_obj_geo1_DW_texture_mask_scatter4_fix_Z_voxel_size +tx +ty +tz +rx +ry +rz +sx +sy +sz
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_DW_texture_mask_scatter4_fix_Z_voxel_size
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_fix_Z_voxel_size
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_fix_Z_voxel_size
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1 (Sop/attribtransferbyuv)
+set _obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1 = `run("opadd -e -n -v attribtransferbyuv attribtransferbyuv1")`
+oplocate -x `$arg2 + 0.84440000000000004` -y `$arg3 + -0.84764099999999998` $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1
+chblockbegin
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1 pointattribs
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../pointattribs")' $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1/pointattribs
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1 vertattribs
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../vertattribs")' $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1/vertattribs
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1 primattribs
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../primattribs")' $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1/primattribs
+chblockend
+opparm $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1 uvattribclass ( point ) pointattribs ( pointattribs ) vertattribs ( vertattribs ) primattribs ( primattribs )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1
+opuserdata -n '___Version___' -v '' $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_attribpromote1 (Sop/attribpromote)
+set _obj_geo1_DW_texture_mask_scatter4_attribpromote1 = `run("opadd -e -n -v attribpromote attribpromote1")`
+oplocate -x `$arg2 + -1.9390499999999999` -y `$arg3 + 2.0743100000000001` $_obj_geo1_DW_texture_mask_scatter4_attribpromote1
+opparm -V 20.5.278 $_obj_geo1_DW_texture_mask_scatter4_attribpromote1 inname ( uv ) inclass ( vertex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_DW_texture_mask_scatter4_attribpromote1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_attribpromote1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_attribpromote1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_polys (Sop/null)
+set _obj_geo1_DW_texture_mask_scatter4_polys = `run("opadd -e -n -v null polys")`
+oplocate -x `$arg2 + -2.0536400000000001` -y `$arg3 + 5.92889` $_obj_geo1_DW_texture_mask_scatter4_polys
+opspareds '    parm {         name    "copyinput"         baseparm         label   "Copy Input (Note: Input will be still cooked if disabled)"         export  none     }     parm {         name    "cacheinput"         baseparm         label   "Cache Input"         export  none     }     parm {         name    "voxel_size"         label   "Voxel Size"         type    float         default { "0" }         range   { 0 10 }         parmtag { "script_callback_language" "python" }     } ' $_obj_geo1_DW_texture_mask_scatter4_polys
+chblockbegin
+chadd -t 40 40 $_obj_geo1_DW_texture_mask_scatter4_polys voxel_size
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'bbox(0, D_XSIZE)/volumeres(0,0,0)' $_obj_geo1_DW_texture_mask_scatter4_polys/voxel_size
+chblockend
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_DW_texture_mask_scatter4_polys
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_polys
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_polys
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_output0 (Sop/output)
+set _obj_geo1_DW_texture_mask_scatter4_output0 = `run("opadd -e -n -v output output0")`
+oplocate -x `$arg2 + 0.53317499999999995` -y `$arg3 + -6.9203299999999999` $_obj_geo1_DW_texture_mask_scatter4_output0
+opparm -V 20.5.278 $_obj_geo1_DW_texture_mask_scatter4_output0 outputidx ( 0 )
+chlock $_obj_geo1_DW_texture_mask_scatter4_output0 +outputidx
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_DW_texture_mask_scatter4_output0
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_output0
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_output0
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_attribcopy1 (Sop/attribcopy)
+set _obj_geo1_DW_texture_mask_scatter4_attribcopy1 = `run("opadd -e -n -v attribcopy attribcopy1")`
+oplocate -x `$arg2 + 0.67988000000000004` -y `$arg3 + -4.7220599999999999` $_obj_geo1_DW_texture_mask_scatter4_attribcopy1
+opparm -V 20.5.278 $_obj_geo1_DW_texture_mask_scatter4_attribcopy1 attribname ( '`chs("../detailattribs")`' ) copyp ( off ) class ( detail )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_DW_texture_mask_scatter4_attribcopy1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_attribcopy1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_attribcopy1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_attribdelete1 (Sop/attribdelete)
+set _obj_geo1_DW_texture_mask_scatter4_attribdelete1 = `run("opadd -e -n -v attribdelete attribdelete1")`
+oplocate -x `$arg2 + 0.67899799999999999` -y `$arg3 + -2.8437199999999998` $_obj_geo1_DW_texture_mask_scatter4_attribdelete1
+opparm $_obj_geo1_DW_texture_mask_scatter4_attribdelete1 ptdel ( point )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_DW_texture_mask_scatter4_attribdelete1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_attribdelete1
+opuserdata -n '___Version___' -v '' $_obj_geo1_DW_texture_mask_scatter4_attribdelete1
+
+# Node $_obj_geo1_DW_texture_mask_scatter4_output1 (Sop/output)
+set _obj_geo1_DW_texture_mask_scatter4_output1 = `run("opadd -e -n -v output output1")`
+oplocate -x `$arg2 + 11.1973` -y `$arg3 + -7.0971299999999999` $_obj_geo1_DW_texture_mask_scatter4_output1
+opparm -V 20.5.278 $_obj_geo1_DW_texture_mask_scatter4_output1 outputidx ( 1 )
+chlock $_obj_geo1_DW_texture_mask_scatter4_output1 +outputidx
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_DW_texture_mask_scatter4_output1
+opexprlanguage -s hscript $_obj_geo1_DW_texture_mask_scatter4_output1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_geo1_DW_texture_mask_scatter4_output1
+oporder -e look_up_uv_attribs volume scatter1 fix_Z_voxel_size attribtransferbyuv1 attribpromote1 polys output0 attribcopy1 attribdelete1 output1 
+opcf ..
+opset -p on $_obj_geo1_DW_texture_mask_scatter4
+
+opcf $arg1
+opcf $_obj_geo1_DW_texture_mask_scatter4
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_scatter1 -0 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_volume -1 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_polys -2 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs
+opcf $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs
+opwire -n -o 19 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopglobal1 -0 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_relbbox1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopglobal1 -2 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_relbbox1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_floattovec1 -0 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_bind1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_relbbox1 -0 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_vectofloat1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_vectofloat1 -0 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_floattovec1
+opwire -n -o 1 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_vectofloat1 -1 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_floattovec1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_parm1 -0 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1
+opwire -n -o 12 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopglobal1 -1 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1
+opwire -n -o 20 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopglobal1 -2 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_geometryvopglobal1 -3 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1
+opcf $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib -2 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib1
+opwire -n -o 1 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_subinput1 -4 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib1
+opwire -n -o 2 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_xyzdist1 -6 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_attrib1 -2 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib2
+opwire -n -o 1 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_subinput1 -4 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib2
+opwire -n -o 1 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_xyzdist1 -6 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_setattrib2
+opwire -n -o 2 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_subinput1 -0 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_xyzdist1
+opwire -n -o 3 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_subinput1 -2 $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs_if1_xyzdist1
+opcf ..
+opcf ..
+opwire -n -i 1 -0 $_obj_geo1_DW_texture_mask_scatter4_volume
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_fix_Z_voxel_size -0 $_obj_geo1_DW_texture_mask_scatter4_scatter1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_volume -0 $_obj_geo1_DW_texture_mask_scatter4_fix_Z_voxel_size
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_look_up_uv_attribs -0 $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_attribpromote1 -1 $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_polys -0 $_obj_geo1_DW_texture_mask_scatter4_attribpromote1
+opwire -n -i 0 -0 $_obj_geo1_DW_texture_mask_scatter4_polys
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_attribcopy1 -0 $_obj_geo1_DW_texture_mask_scatter4_output0
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_attribdelete1 -0 $_obj_geo1_DW_texture_mask_scatter4_attribcopy1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_attribpromote1 -1 $_obj_geo1_DW_texture_mask_scatter4_attribcopy1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_attribtransferbyuv1 -0 $_obj_geo1_DW_texture_mask_scatter4_attribdelete1
+opwire -n $_obj_geo1_DW_texture_mask_scatter4_volume -0 $_obj_geo1_DW_texture_mask_scatter4_output1
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_geo1_DW_texture_mask_scatter4
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_geo1_DW_texture_mask_scatter4
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

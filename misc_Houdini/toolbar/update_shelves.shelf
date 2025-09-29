@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="update_shelves" label="Update Shelves and HDAs" icon="SOP_python">
+    <script scriptType="python"><![CDATA[hou.shelves.reloadShelfFiles()
+hou.hda.reloadAllFiles()]]></script>
+  </tool>
+</shelfDocument>

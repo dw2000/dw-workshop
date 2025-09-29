@@ -1,0 +1,877 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="chop_filter0" label="Chop Filter" icon="NETWORKS_chop">
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'subnet' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_geo1_chopFilter (Sop/subnet)
+set _obj_geo1_chopFilter = `run("opadd -e -n -v subnet chopFilter")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_geo1_chopFilter
+opspareds '    parm {         name    "group"         label   "Group"         type    string         default { "" }         menutoggle {             [ "opmenu -l channel1 group" ]         }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "script_action" "import soputils\\nkwargs[\'geometrytype\'] = (hou.geometryType.Points,)\\nkwargs[\'inputindex\'] = 0\\nsoputils.selectGroupParm(kwargs)" }         parmtag { "script_action_help" "Select geometry from an available viewport.\\nShift-click to turn on Select Groups." }         parmtag { "script_action_icon" "BUTTONS_reselect" }     }     parm {         name    "attscope"         label   "Attribute Scope"         type    string         default { "P" }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }     }     parm {         name    "attrib_type"         label   "Attrib Type"         type    ordinal         default { "0" }         menu {             "_tempX _tempY _tempZ"  "vector"             "_temp"                 "scalar"         }         range   { 0 1 }     }     group {         name    "stdswitcher"         label   "Filter"          parm {             name    "type"             label   "Type"             type    ordinal             default { "0" }             menu {                 "gauss"     "Gaussian"                 "halfgauss" "Left Half Gaussian"                 "box"       "Box"                 "halfbox"   "Left Half Box"                 "edge"      "Edge Detect"                 "sharpen"   "Sharpen"                 "despike"   "De-spike"             }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "effect"             label   "Effect"             type    float             default { "1" }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "width"             label   "Filter Width (frames)"             type    float             default { "12" }             range   { 0.001! 250 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "spike"             label   "Spike Tolerance"             type    float             default { "0.1" }             hidewhen "{ type != despike }"             range   { 0! 1 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "passes"             label   "Number of Passes"             type    integer             default { "1" }             range   { 1! 10 }             parmtag { "autoscope" "0000000000000000" }         }     }      group {         name    "stdswitcher_1"         label   "Remap"          parm {             name    "remap"             label   "Remap"             type    toggle             default { "0" }             range   { 0 1 }         }         parm {             name    "destmin"             label   "New Min"             type    float             default { "0" }             range   { 0 1 }         }         parm {             name    "destmax"             label   "New Max"             type    float             default { "100" }             range   { 0 1 }         }     }      parm {         name    "start"         label   "Start Frame"         type    float         default { [ "$FSTART" hscript-expr ] }         range   { 1001 1200 }     }     parm {         name    "end"         label   "End Frame"         type    float         default { [ "$FEND" hscript-expr ] }         range   { 1001 1200 }     }     parm {         name    "rate"         label   "Sample Rate"         type    float         default { [ "$FPS" hscript-expr ] }         range   { 0 100 }     }     parm {         name    "label1"         baseparm         label   "Input #1 Label"         invisible         export  all     }     parm {         name    "label2"         baseparm         label   "Input #2 Label"         invisible         export  all     }     parm {         name    "label3"         baseparm         label   "Input #3 Label"         invisible         export  all     }     parm {         name    "label4"         baseparm         label   "Input #4 Label"         invisible         export  all     } ' $_obj_geo1_chopFilter
+chblockbegin
+chadd -t 40 40 $_obj_geo1_chopFilter start
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FSTART' $_obj_geo1_chopFilter/start
+chadd -t 40 40 $_obj_geo1_chopFilter end
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FEND' $_obj_geo1_chopFilter/end
+chadd -t 40 40 $_obj_geo1_chopFilter rate
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FPS' $_obj_geo1_chopFilter/rate
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter
+opcolor -c 0.70999997854232788 0.7839999794960022 1 $_obj_geo1_chopFilter
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_chopFilter
+opexprlanguage -s hscript $_obj_geo1_chopFilter
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter
+opcf $_obj_geo1_chopFilter
+
+# Node $_obj_geo1_chopFilter_chopnet1 (Sop/chopnet)
+set _obj_geo1_chopFilter_chopnet1 = `run("opadd -e -n -v chopnet chopnet1")`
+oplocate -x `$arg2 + -1.0182` -y `$arg3 + 0.363236` $_obj_geo1_chopFilter_chopnet1
+opspareds '    parm {         name    "destmin"         label   "Dest Min"         type    float         default { "150" }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "chop" }     }     parm {         name    "destmax"         label   "Dest Max"         type    float         default { "350" }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "chop" }     }     parm {         name    "remap"         label   "remap"         type    integer         default { "0" }         range   { 0 10 }         parmtag { "autoscope" "0000000000000000" }     }     group {         name    "stdswitcher"         label   "Filter"          parm {             name    "type"             label   "Type"             type    ordinal             default { "halfgauss" }             menu {                 "gauss"     "Gaussian"                 "halfgauss" "Left Half Gaussian"                 "box"       "Box"                 "halfbox"   "Left Half Box"                 "edge"      "Edge Detect"                 "sharpen"   "Sharpen"                 "despike"   "De-spike"             }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "effect"             label   "Effect"             type    float             default { "1" }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "width"             label   "Filter Width"             type    float             default { "12" }             range   { 0.001! 2 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "spike"             label   "Spike Tolerance"             type    float             default { "0.1" }             range   { 0! 1 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "passes"             label   "Number of Passes"             type    integer             default { "1" }             range   { 1! 10 }             parmtag { "autoscope" "0000000000000000" }         }     }      parm {         name    "end"         label   "end frame"         type    float         default { "0" }         range   { 0 10 }     }     parm {         name    "start"         label   "start frame"         type    float         default { "0" }         range   { 0 10 }     }     parm {         name    "sample_rate"         label   "sample_rate"         type    float         default { "0" }         range   { 0 10 }     } ' $_obj_geo1_chopFilter_chopnet1
+chblockbegin
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 destmin
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../destmin")' $_obj_geo1_chopFilter_chopnet1/destmin
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 destmax
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../destmax")' $_obj_geo1_chopFilter_chopnet1/destmax
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 remap
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../remap")' $_obj_geo1_chopFilter_chopnet1/remap
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 type
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../type")' $_obj_geo1_chopFilter_chopnet1/type
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 effect
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../effect")' $_obj_geo1_chopFilter_chopnet1/effect
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 width
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../width")' $_obj_geo1_chopFilter_chopnet1/width
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 spike
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../spike")' $_obj_geo1_chopFilter_chopnet1/spike
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 passes
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../passes")' $_obj_geo1_chopFilter_chopnet1/passes
+chadd -t 4.1666665077209473 4.1666665077209473 $_obj_geo1_chopFilter_chopnet1 end
+chkey -t 4.1666665077209473 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../end")' $_obj_geo1_chopFilter_chopnet1/end
+chadd -t 4.1666665077209473 4.1666665077209473 $_obj_geo1_chopFilter_chopnet1 start
+chkey -t 4.1666665077209473 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../start")' $_obj_geo1_chopFilter_chopnet1/start
+chadd -t 2.4166667461395264 2.4166667461395264 $_obj_geo1_chopFilter_chopnet1 sample_rate
+chkey -t 2.4166667461395264 -v 24 -m 0 -a 0 -A 0 -T a  -F 'ch("../rate")' $_obj_geo1_chopFilter_chopnet1/sample_rate
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1 destmin ( destmin ) destmax ( destmax ) remap ( remap ) type ( type ) effect ( effect ) width ( width ) spike ( spike ) passes ( passes ) end ( end ) start ( start ) sample_rate ( sample_rate )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_chopFilter_chopnet1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1
+opcf $_obj_geo1_chopFilter_chopnet1
+
+# Node $_obj_geo1_chopFilter_chopnet1_vopchop1 (Chop/vopchop)
+set _obj_geo1_chopFilter_chopnet1_vopchop1 = `run("opadd -e -n -v vopchop vopchop1")`
+oplocate -x `$arg2 + 7.5853000000000002` -y `$arg3 + 2.1792600000000002` $_obj_geo1_chopFilter_chopnet1_vopchop1
+opspareds '    group {         name    "stdswitcher4"         label   "Compiler"          parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }     }      group {         name    "stdswitcher4_1"         label   "Channel"          parm {             name    "vex_align"             baseparm             label   "Align"             export  none         }         parm {             name    "vex_name"             baseparm             label   "Channel Name"             export  none         }         parm {             name    "vex_range"             baseparm             label   "Channel Range"             export  none         }         parm {             name    "vex_start"             baseparm             label   "Start"             export  none         }         parm {             name    "vex_end"             baseparm             label   "End"             export  none         }         parm {             name    "vex_rate"             baseparm             label   "Sample Rate"             export  none         }     }      group {         name    "stdswitcher4_2"         label   "Common"          parm {             name    "scope"             baseparm             label   "Scope"             export  none         }         parm {             name    "srselect"             baseparm             label   "Sample Rate Match"             export  none         }         parm {             name    "units"             baseparm             label   "Units"             export  none         }         parm {             name    "timeslice"             baseparm             label   "Time Slice"             export  none         }         parm {             name    "unload"             baseparm             label   "Unload"             export  none         }         parm {             name    "export"             baseparm             label   "Export Prefix"             export  none         }         parm {             name    "gcolor"             baseparm             label   "Graph Color"             export  none         }         parm {             name    "gcolorstep"             baseparm             label   "Graph Color Step"             export  none         }     }      parm {         name    "destmin"         label   "dest min"         type    float         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "chop" }     }     parm {         name    "destmax"         label   "dest max"         type    float         default { "1" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "chop" }     }     parm {         name    "vex_count"         baseparm         label   "Channel Count"         export  none     }     parm {         name    "vex_iterate"         baseparm         label   "Iterate"         export  none     }     parm {         name    "vex_iterate_step"         baseparm         label   "Iterate step"         export  none     }     parm {         name    "vex_iterate_names"         baseparm         label   "Iterate Names"         export  none     }     parm {         name    "vex_cwdpath"         baseparm         label   "Evaluation Node Path"         export  none     }     parm {         name    "vex_precision"         baseparm         label   "VEX Precision"         export  none     }     parm {         name    "vex_num_threads"         baseparm         label   "Number of Threads"         export  none     } ' $_obj_geo1_chopFilter_chopnet1_vopchop1
+chblockbegin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_vopchop1 vex_rate
+chkey -t 0 -v 24 -m 0 -a 0 -A 0 -T a  -F '$FPS' $_obj_geo1_chopFilter_chopnet1_vopchop1/vex_rate
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_vopchop1 destmin
+chkey -t 0 -v 150 -m 0 -a 0 -A 0 -T a  -F 'ch("../destmin")' $_obj_geo1_chopFilter_chopnet1_vopchop1/destmin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_vopchop1 destmax
+chkey -t 0 -v 350 -m 0 -a 0 -A 0 -T a  -F 'ch("../destmax")' $_obj_geo1_chopFilter_chopnet1_vopchop1/destmax
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_vopchop1 vop_compiler ( 'vcc -r -q $VOP_INCLUDEPATH -o $VOP_OBJECTFILE -e $VOP_ERRORFILE $VOP_SOURCEFILE' ) vex_rate ( vex_rate ) export ( ../../../../.. ) gcolor ( 0 0.89999997615814209 0 ) destmin ( destmin ) destmax ( destmax )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_vopchop1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -a off -o off $_obj_geo1_chopFilter_chopnet1_vopchop1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_vopchop1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_vopchop1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_vopchop1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_vopchop1
+opcf $_obj_geo1_chopFilter_chopnet1_vopchop1
+
+# Node $_obj_geo1_chopFilter_chopnet1_vopchop1_global1 (Vop/global)
+set _obj_geo1_chopFilter_chopnet1_vopchop1_global1 = `run("opadd -e -n -v global global1")`
+oplocate -x `$arg2 + 1` -y `$arg3 + 1` $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_vopchop1_global1 contexttype ( chop )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+
+# Node $_obj_geo1_chopFilter_chopnet1_vopchop1_output1 (Vop/output)
+set _obj_geo1_chopFilter_chopnet1_vopchop1_output1 = `run("opadd -e -n -v output output1")`
+oplocate -x `$arg2 + 5` -y `$arg3 + 1` $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_vopchop1_output1 contexttype ( chop ) outputcodelast ( on )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+
+# Node $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1 (Vop/fit)
+set _obj_geo1_chopFilter_chopnet1_vopchop1_fit1 = `run("opadd -e -n -v fit fit1")`
+oplocate -x `$arg2 + 3.2564700000000002` -y `$arg3 + 1.4236` $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+chblockbegin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1 destmin
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch(\'../destmin/floatdef\')' $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1/destmin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1 destmax
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch(\'../destmax/floatdef\')' $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1/destmax
+chblockend
+opparm $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1 srcmin ( -1 ) destmin ( destmin ) destmax ( destmax )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opuserdata -n '___Version___' -v '' $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+
+# Node $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin (Vop/parameter)
+set _obj_geo1_chopFilter_chopnet1_vopchop1_destmin = `run("opadd -e -n -v parameter destmin")`
+oplocate -x `$arg2 + 1.4996100000000001` -y `$arg3 + -0.0103867` $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin parmname ( destmin ) parmlabel ( 'dest min' ) exportcontext ( chop )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+
+# Node $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax (Vop/parameter)
+set _obj_geo1_chopFilter_chopnet1_vopchop1_destmax = `run("opadd -e -n -v parameter destmax")`
+oplocate -x `$arg2 + 1.5505899999999999` -y `$arg3 + -0.92117099999999996` $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax parmname ( destmax ) parmlabel ( 'dest max' ) floatdef ( 1 ) exportcontext ( chop )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opcf ..
+opcf ..
+opcf ..
+opcf $_obj_geo1_chopFilter
+opcf $_obj_geo1_chopFilter_chopnet1
+
+# Node $_obj_geo1_chopFilter_chopnet1_geometry1 (Chop/geometry)
+set _obj_geo1_chopFilter_chopnet1_geometry1 = `run("opadd -e -n -v geometry geometry1")`
+oplocate -x `$arg2 + 6.24695` -y `$arg3 + 3.95573` $_obj_geo1_chopFilter_chopnet1_geometry1
+chblockbegin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_geometry1 soppath
+chkey -t 0 -v 0 -m 0 -a 0.3333333432674408 -A 0.3333333432674408 -T a  -F '"../../IN"' $_obj_geo1_chopFilter_chopnet1_geometry1/soppath
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_geometry1 attribscope
+chkey -t 0 -v 0 -m 0 -a 0.3333333432674408 -A 0.3333333432674408 -T a  -F 'chs("../../channel1/attscope")' $_obj_geo1_chopFilter_chopnet1_geometry1/attribscope
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_geometry1 renamescope
+chkey -t 0 -v 0 -m 0 -a 0.3333333432674408 -A 0.3333333432674408 -T a  -F 'chs("../../channel1/chanscope")' $_obj_geo1_chopFilter_chopnet1_geometry1/renamescope
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_geometry1 organize
+chkey -t 0 -v 0 -m 0 -a 0.3333333432674408 -A 0.3333333432674408 -T a  -F 'chs("../../channel1/organize")' $_obj_geo1_chopFilter_chopnet1_geometry1/organize
+chadd -t 2.4166667461395264 2.4166667461395264 $_obj_geo1_chopFilter_chopnet1_geometry1 start
+chkey -t 2.4166667461395264 -v 59 -m 0 -a 0 -A 0 -T a  -F 'ch("../start")' $_obj_geo1_chopFilter_chopnet1_geometry1/start
+chadd -t 2.4166667461395264 2.4166667461395264 $_obj_geo1_chopFilter_chopnet1_geometry1 end
+chkey -t 2.4166667461395264 -v 60 -m 0 -a 0 -A 0 -T a  -F 'ch("../end")' $_obj_geo1_chopFilter_chopnet1_geometry1/end
+chadd -t 2.4166667461395264 2.4166667461395264 $_obj_geo1_chopFilter_chopnet1_geometry1 rate
+chkey -t 2.4166667461395264 -v 24 -m 0 -a 0 -A 0 -T a  -F 'ch("../sample_rate")' $_obj_geo1_chopFilter_chopnet1_geometry1/rate
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_geometry1 soppath ( soppath ) method ( animated ) attribscope ( attribscope ) renamescope ( renamescope ) organize ( organize ) range ( user ) start ( start ) end ( end ) rate ( rate ) units ( frames ) export ( ../../../../.. ) gcolor ( 0.89999997615814209 0.44999998807907104 0 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_geometry1
+opset -d off -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -a on -o off $_obj_geo1_chopFilter_chopnet1_geometry1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_geometry1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_geometry1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_geometry1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_geometry1
+
+# Node $_obj_geo1_chopFilter_chopnet1_OUT (Chop/null)
+set _obj_geo1_chopFilter_chopnet1_OUT = `run("opadd -e -n -v null OUT")`
+oplocate -x `$arg2 + 6.24695` -y `$arg3 + -0.742618` $_obj_geo1_chopFilter_chopnet1_OUT
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_OUT export ( ../../../../.. ) gcolor ( 0.89999997615814209 0.89999997615814209 0 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_OUT
+opset -d on -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -a off -o off $_obj_geo1_chopFilter_chopnet1_OUT
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_OUT
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_OUT
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_OUT
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_OUT
+
+# Node $_obj_geo1_chopFilter_chopnet1_normalize (Chop/limit)
+set _obj_geo1_chopFilter_chopnet1_normalize = `run("opadd -e -n -v limit normalize")`
+oplocate -x `$arg2 + 7.5853000000000002` -y `$arg3 + 2.84985` $_obj_geo1_chopFilter_chopnet1_normalize
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_normalize norm ( on ) export ( ../../../../.. ) gcolor ( 0.44999998807907104 0.89999997615814209 0 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_normalize
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -a off -o off $_obj_geo1_chopFilter_chopnet1_normalize
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_normalize
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_normalize
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_normalize
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_normalize
+opcf $_obj_geo1_chopFilter_chopnet1_vopchop1
+oporder -e global1 output1 fit1 destmin destmax 
+opcf ..
+
+# Node $_obj_geo1_chopFilter_chopnet1_filter1 (Chop/filter)
+set _obj_geo1_chopFilter_chopnet1_filter1 = `run("opadd -e -n -v filter filter1")`
+oplocate -x `$arg2 + 6.24695` -y `$arg3 + 0.116206` $_obj_geo1_chopFilter_chopnet1_filter1
+chblockbegin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_filter1 type
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../type")' $_obj_geo1_chopFilter_chopnet1_filter1/type
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_filter1 effect
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../effect")' $_obj_geo1_chopFilter_chopnet1_filter1/effect
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_filter1 width
+chkey -t 0 -v 12 -m 0 -a 0 -A 0 -T a  -F 'ch("../width")' $_obj_geo1_chopFilter_chopnet1_filter1/width
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_filter1 spike
+chkey -t 0 -v 0.10000000149011612 -m 0 -a 0 -A 0 -T a  -F 'ch("../spike")' $_obj_geo1_chopFilter_chopnet1_filter1/spike
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_filter1 passes
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../passes")' $_obj_geo1_chopFilter_chopnet1_filter1/passes
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_filter1 type ( type ) effect ( effect ) width ( width ) spike ( spike ) passes ( passes ) units ( frames ) export ( ../../../../.. ) gcolor ( 0 0.89999997615814209 0.44999998807907104 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_filter1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -a off -o off $_obj_geo1_chopFilter_chopnet1_filter1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_filter1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_filter1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_filter1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_filter1
+
+# Node $_obj_geo1_chopFilter_chopnet1_switch1 (Chop/switch)
+set _obj_geo1_chopFilter_chopnet1_switch1 = `run("opadd -e -n -v switch switch1")`
+oplocate -x `$arg2 + 6.24695` -y `$arg3 + 1.30609` $_obj_geo1_chopFilter_chopnet1_switch1
+chblockbegin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_switch1 index
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../remap")' $_obj_geo1_chopFilter_chopnet1_switch1/index
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_switch1 index ( index ) export ( ../../../../.. ) gcolor ( 0 0.89999997615814209 0 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_switch1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -a off -o off $_obj_geo1_chopFilter_chopnet1_switch1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_switch1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_switch1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_switch1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_switch1
+oporder -e geometry1 OUT normalize vopchop1 filter1 switch1 
+opcf ..
+
+# Node $_obj_geo1_chopFilter_channel1 (Sop/channel)
+set _obj_geo1_chopFilter_channel1 = `run("opadd -e -n -v channel channel1")`
+oplocate -x `$arg2 + 0.80704500000000001` -y `$arg3 + 0.206872` $_obj_geo1_chopFilter_channel1
+chblockbegin
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_channel1 group
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../group")' $_obj_geo1_chopFilter_channel1/group
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_channel1 attscope
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../attscope")' $_obj_geo1_chopFilter_channel1/attscope
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter_channel1 group ( group ) choppath ( ../chopnet1/OUT ) method ( animated ) chanscope ( '`chs("../attrib_type")' ) attscope ( attscope )
+chautoscope $_obj_geo1_chopFilter_channel1 +chanscope
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_channel1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_chopFilter_channel1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_channel1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_channel1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_channel1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_channel1
+
+# Node $_obj_geo1_chopFilter_IN (Sop/null)
+set _obj_geo1_chopFilter_IN = `run("opadd -e -n -v null IN")`
+oplocate -x `$arg2 + 0.80704500000000001` -y `$arg3 + 3.7559` $_obj_geo1_chopFilter_IN
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_IN
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_chopFilter_IN
+opexprlanguage -s hscript $_obj_geo1_chopFilter_IN
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_IN
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_IN
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_IN
+
+# Node $_obj_geo1_chopFilter_output1 (Sop/output)
+set _obj_geo1_chopFilter_output1 = `run("opadd -e -n -v output output1")`
+oplocate -x `$arg2 + 0.83213700000000002` -y `$arg3 + -1.7891999999999999` $_obj_geo1_chopFilter_output1
+opparm -V 19.5.368 $_obj_geo1_chopFilter_output1 outputidx ( 0 )
+chlock $_obj_geo1_chopFilter_output1 +outputidx
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_output1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_chopFilter_output1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_output1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_output1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_output1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_output1
+oporder -e chopnet1 channel1 IN output1 
+opcf ..
+opset -p on $_obj_geo1_chopFilter
+
+opcf $arg1
+opcf $_obj_geo1_chopFilter
+opcf $_obj_geo1_chopFilter_chopnet1
+opwire -n $_obj_geo1_chopFilter_chopnet1_filter1 -0 $_obj_geo1_chopFilter_chopnet1_OUT
+opwire -n $_obj_geo1_chopFilter_chopnet1_geometry1 -0 $_obj_geo1_chopFilter_chopnet1_normalize
+opwire -n $_obj_geo1_chopFilter_chopnet1_normalize -0 $_obj_geo1_chopFilter_chopnet1_vopchop1
+opcf $_obj_geo1_chopFilter_chopnet1_vopchop1
+opwire -n $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1 -0 $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opwire -n $_obj_geo1_chopFilter_chopnet1_vopchop1_global1 -0 $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opwire -n $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin -3 $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opwire -n $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax -4 $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opcf ..
+opwire -n $_obj_geo1_chopFilter_chopnet1_switch1 -0 $_obj_geo1_chopFilter_chopnet1_filter1
+opwire -n $_obj_geo1_chopFilter_chopnet1_geometry1 -0 $_obj_geo1_chopFilter_chopnet1_switch1
+opwire -n $_obj_geo1_chopFilter_chopnet1_vopchop1 -1 $_obj_geo1_chopFilter_chopnet1_switch1
+opcf ..
+opwire -n $_obj_geo1_chopFilter_IN -0 $_obj_geo1_chopFilter_channel1
+opwire -n -i 0 -0 $_obj_geo1_chopFilter_IN
+opwire -n $_obj_geo1_chopFilter_channel1 -0 $_obj_geo1_chopFilter_output1
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_geo1_chopFilter
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_geo1_chopFilter
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+
+  <tool name="chop_filter" label="Chop Filter" icon="NETWORKS_chop">
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'subnet' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_geo1_chopFilter (Sop/subnet)
+set _obj_geo1_chopFilter = `run("opadd -e -n -v subnet chopFilter")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_geo1_chopFilter
+opspareds '    parm {         name    "group"         label   "Group"         type    string         default { "" }         menutoggle {             [ "opmenu -l channel1 group" ]         }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "script_action" "import soputils\\nkwargs[\'geometrytype\'] = (hou.geometryType.Points,)\\nkwargs[\'inputindex\'] = 0\\nsoputils.selectGroupParm(kwargs)" }         parmtag { "script_action_help" "Select geometry from an available viewport.\\nShift-click to turn on Select Groups." }         parmtag { "script_action_icon" "BUTTONS_reselect" }     }     parm {         name    "attscope"         label   "Attribute Scope"         type    string         default { "P" }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }     }     parm {         name    "attrib_type"         label   "Attrib Type"         type    ordinal         default { "0" }         menu {             "_tempX _tempY _tempZ"  "vector"             "_temp"                 "scalar"         }         range   { 0 1 }     }     group {         name    "stdswitcher"         label   "Filter"          parm {             name    "type"             label   "Type"             type    ordinal             default { "0" }             menu {                 "gauss"     "Gaussian"                 "halfgauss" "Left Half Gaussian"                 "box"       "Box"                 "halfbox"   "Left Half Box"                 "edge"      "Edge Detect"                 "sharpen"   "Sharpen"                 "despike"   "De-spike"             }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "effect"             label   "Effect"             type    float             default { "1" }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "width"             label   "Filter Width (frames)"             type    float             default { "12" }             range   { 0.001! 250 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "spike"             label   "Spike Tolerance"             type    float             default { "0.1" }             hidewhen "{ type != despike }"             range   { 0! 1 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "passes"             label   "Number of Passes"             type    integer             default { "1" }             range   { 1! 10 }             parmtag { "autoscope" "0000000000000000" }         }     }      group {         name    "stdswitcher_1"         label   "Remap"          parm {             name    "remap"             label   "Remap"             type    toggle             default { "0" }             range   { 0 1 }         }         parm {             name    "destmin"             label   "New Min"             type    float             default { "0" }             range   { 0 1 }         }         parm {             name    "destmax"             label   "New Max"             type    float             default { "100" }             range   { 0 1 }         }     }      parm {         name    "start"         label   "Start Frame"         type    float         default { [ "$FSTART" hscript-expr ] }         range   { 1001 1200 }     }     parm {         name    "end"         label   "End Frame"         type    float         default { [ "$FEND" hscript-expr ] }         range   { 1001 1200 }     }     parm {         name    "rate"         label   "Sample Rate"         type    float         default { [ "$FPS" hscript-expr ] }         range   { 0 100 }     }     parm {         name    "label1"         baseparm         label   "Input #1 Label"         invisible         export  all     }     parm {         name    "label2"         baseparm         label   "Input #2 Label"         invisible         export  all     }     parm {         name    "label3"         baseparm         label   "Input #3 Label"         invisible         export  all     }     parm {         name    "label4"         baseparm         label   "Input #4 Label"         invisible         export  all     } ' $_obj_geo1_chopFilter
+chblockbegin
+chadd -t 40 40 $_obj_geo1_chopFilter start
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FSTART' $_obj_geo1_chopFilter/start
+chadd -t 40 40 $_obj_geo1_chopFilter end
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FEND' $_obj_geo1_chopFilter/end
+chadd -t 40 40 $_obj_geo1_chopFilter rate
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FPS' $_obj_geo1_chopFilter/rate
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter
+opcolor -c 0.70999997854232788 0.7839999794960022 1 $_obj_geo1_chopFilter
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_chopFilter
+opexprlanguage -s hscript $_obj_geo1_chopFilter
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter
+opcf $_obj_geo1_chopFilter
+
+# Node $_obj_geo1_chopFilter_chopnet1 (Sop/chopnet)
+set _obj_geo1_chopFilter_chopnet1 = `run("opadd -e -n -v chopnet chopnet1")`
+oplocate -x `$arg2 + -1.0182` -y `$arg3 + 0.363236` $_obj_geo1_chopFilter_chopnet1
+opspareds '    parm {         name    "destmin"         label   "Dest Min"         type    float         default { "150" }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "chop" }     }     parm {         name    "destmax"         label   "Dest Max"         type    float         default { "350" }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "chop" }     }     parm {         name    "remap"         label   "remap"         type    integer         default { "0" }         range   { 0 10 }         parmtag { "autoscope" "0000000000000000" }     }     group {         name    "stdswitcher"         label   "Filter"          parm {             name    "type"             label   "Type"             type    ordinal             default { "halfgauss" }             menu {                 "gauss"     "Gaussian"                 "halfgauss" "Left Half Gaussian"                 "box"       "Box"                 "halfbox"   "Left Half Box"                 "edge"      "Edge Detect"                 "sharpen"   "Sharpen"                 "despike"   "De-spike"             }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "effect"             label   "Effect"             type    float             default { "1" }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "width"             label   "Filter Width"             type    float             default { "12" }             range   { 0.001! 2 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "spike"             label   "Spike Tolerance"             type    float             default { "0.1" }             range   { 0! 1 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "passes"             label   "Number of Passes"             type    integer             default { "1" }             range   { 1! 10 }             parmtag { "autoscope" "0000000000000000" }         }     }      parm {         name    "end"         label   "end frame"         type    float         default { "0" }         range   { 0 10 }     }     parm {         name    "start"         label   "start frame"         type    float         default { "0" }         range   { 0 10 }     }     parm {         name    "sample_rate"         label   "sample_rate"         type    float         default { "0" }         range   { 0 10 }     } ' $_obj_geo1_chopFilter_chopnet1
+chblockbegin
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 destmin
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../destmin")' $_obj_geo1_chopFilter_chopnet1/destmin
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 destmax
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../destmax")' $_obj_geo1_chopFilter_chopnet1/destmax
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 remap
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../remap")' $_obj_geo1_chopFilter_chopnet1/remap
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 type
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../type")' $_obj_geo1_chopFilter_chopnet1/type
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 effect
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../effect")' $_obj_geo1_chopFilter_chopnet1/effect
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 width
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../width")' $_obj_geo1_chopFilter_chopnet1/width
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 spike
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../spike")' $_obj_geo1_chopFilter_chopnet1/spike
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_chopnet1 passes
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../passes")' $_obj_geo1_chopFilter_chopnet1/passes
+chadd -t 4.1666665077209473 4.1666665077209473 $_obj_geo1_chopFilter_chopnet1 end
+chkey -t 4.1666665077209473 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../end")' $_obj_geo1_chopFilter_chopnet1/end
+chadd -t 4.1666665077209473 4.1666665077209473 $_obj_geo1_chopFilter_chopnet1 start
+chkey -t 4.1666665077209473 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../start")' $_obj_geo1_chopFilter_chopnet1/start
+chadd -t 2.4166667461395264 2.4166667461395264 $_obj_geo1_chopFilter_chopnet1 sample_rate
+chkey -t 2.4166667461395264 -v 24 -m 0 -a 0 -A 0 -T a  -F 'ch("../rate")' $_obj_geo1_chopFilter_chopnet1/sample_rate
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1 destmin ( destmin ) destmax ( destmax ) remap ( remap ) type ( type ) effect ( effect ) width ( width ) spike ( spike ) passes ( passes ) end ( end ) start ( start ) sample_rate ( sample_rate )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_chopFilter_chopnet1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1
+opcf $_obj_geo1_chopFilter_chopnet1
+
+# Node $_obj_geo1_chopFilter_chopnet1_vopchop1 (Chop/vopchop)
+set _obj_geo1_chopFilter_chopnet1_vopchop1 = `run("opadd -e -n -v vopchop vopchop1")`
+oplocate -x `$arg2 + 7.5853000000000002` -y `$arg3 + 2.1792600000000002` $_obj_geo1_chopFilter_chopnet1_vopchop1
+opspareds '    group {         name    "stdswitcher4"         label   "Compiler"          parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }     }      group {         name    "stdswitcher4_1"         label   "Channel"          parm {             name    "vex_align"             baseparm             label   "Align"             export  none         }         parm {             name    "vex_name"             baseparm             label   "Channel Name"             export  none         }         parm {             name    "vex_range"             baseparm             label   "Channel Range"             export  none         }         parm {             name    "vex_start"             baseparm             label   "Start"             export  none         }         parm {             name    "vex_end"             baseparm             label   "End"             export  none         }         parm {             name    "vex_rate"             baseparm             label   "Sample Rate"             export  none         }     }      group {         name    "stdswitcher4_2"         label   "Common"          parm {             name    "scope"             baseparm             label   "Scope"             export  none         }         parm {             name    "srselect"             baseparm             label   "Sample Rate Match"             export  none         }         parm {             name    "units"             baseparm             label   "Units"             export  none         }         parm {             name    "timeslice"             baseparm             label   "Time Slice"             export  none         }         parm {             name    "unload"             baseparm             label   "Unload"             export  none         }         parm {             name    "export"             baseparm             label   "Export Prefix"             export  none         }         parm {             name    "gcolor"             baseparm             label   "Graph Color"             export  none         }         parm {             name    "gcolorstep"             baseparm             label   "Graph Color Step"             export  none         }     }      parm {         name    "destmin"         label   "dest min"         type    float         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "chop" }     }     parm {         name    "destmax"         label   "dest max"         type    float         default { "1" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "chop" }     }     parm {         name    "vex_count"         baseparm         label   "Channel Count"         export  none     }     parm {         name    "vex_iterate"         baseparm         label   "Iterate"         export  none     }     parm {         name    "vex_iterate_step"         baseparm         label   "Iterate step"         export  none     }     parm {         name    "vex_iterate_names"         baseparm         label   "Iterate Names"         export  none     }     parm {         name    "vex_cwdpath"         baseparm         label   "Evaluation Node Path"         export  none     }     parm {         name    "vex_precision"         baseparm         label   "VEX Precision"         export  none     }     parm {         name    "vex_num_threads"         baseparm         label   "Number of Threads"         export  none     } ' $_obj_geo1_chopFilter_chopnet1_vopchop1
+chblockbegin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_vopchop1 vex_rate
+chkey -t 0 -v 24 -m 0 -a 0 -A 0 -T a  -F '$FPS' $_obj_geo1_chopFilter_chopnet1_vopchop1/vex_rate
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_vopchop1 destmin
+chkey -t 0 -v 150 -m 0 -a 0 -A 0 -T a  -F 'ch("../destmin")' $_obj_geo1_chopFilter_chopnet1_vopchop1/destmin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_vopchop1 destmax
+chkey -t 0 -v 350 -m 0 -a 0 -A 0 -T a  -F 'ch("../destmax")' $_obj_geo1_chopFilter_chopnet1_vopchop1/destmax
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_vopchop1 vop_compiler ( 'vcc -r -q $VOP_INCLUDEPATH -o $VOP_OBJECTFILE -e $VOP_ERRORFILE $VOP_SOURCEFILE' ) vex_rate ( vex_rate ) export ( ../../../../.. ) gcolor ( 0 0.89999997615814209 0 ) destmin ( destmin ) destmax ( destmax )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_vopchop1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -a off -o off $_obj_geo1_chopFilter_chopnet1_vopchop1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_vopchop1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_vopchop1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_vopchop1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_vopchop1
+opcf $_obj_geo1_chopFilter_chopnet1_vopchop1
+
+# Node $_obj_geo1_chopFilter_chopnet1_vopchop1_global1 (Vop/global)
+set _obj_geo1_chopFilter_chopnet1_vopchop1_global1 = `run("opadd -e -n -v global global1")`
+oplocate -x `$arg2 + 1` -y `$arg3 + 1` $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_vopchop1_global1 contexttype ( chop )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_vopchop1_global1
+
+# Node $_obj_geo1_chopFilter_chopnet1_vopchop1_output1 (Vop/output)
+set _obj_geo1_chopFilter_chopnet1_vopchop1_output1 = `run("opadd -e -n -v output output1")`
+oplocate -x `$arg2 + 5` -y `$arg3 + 1` $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_vopchop1_output1 contexttype ( chop ) outputcodelast ( on )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+
+# Node $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1 (Vop/fit)
+set _obj_geo1_chopFilter_chopnet1_vopchop1_fit1 = `run("opadd -e -n -v fit fit1")`
+oplocate -x `$arg2 + 3.2564700000000002` -y `$arg3 + 1.4236` $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+chblockbegin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1 destmin
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch(\'../destmin/floatdef\')' $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1/destmin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1 destmax
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch(\'../destmax/floatdef\')' $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1/destmax
+chblockend
+opparm $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1 srcmin ( -1 ) destmin ( destmin ) destmax ( destmax )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opuserdata -n '___Version___' -v '' $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+
+# Node $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin (Vop/parameter)
+set _obj_geo1_chopFilter_chopnet1_vopchop1_destmin = `run("opadd -e -n -v parameter destmin")`
+oplocate -x `$arg2 + 1.4996100000000001` -y `$arg3 + -0.0103867` $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin parmname ( destmin ) parmlabel ( 'dest min' ) exportcontext ( chop )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin
+
+# Node $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax (Vop/parameter)
+set _obj_geo1_chopFilter_chopnet1_vopchop1_destmax = `run("opadd -e -n -v parameter destmax")`
+oplocate -x `$arg2 + 1.5505899999999999` -y `$arg3 + -0.92117099999999996` $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax parmname ( destmax ) parmlabel ( 'dest max' ) floatdef ( 1 ) exportcontext ( chop )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax
+opcf ..
+opcf ..
+opcf ..
+opcf $_obj_geo1_chopFilter
+opcf $_obj_geo1_chopFilter_chopnet1
+
+# Node $_obj_geo1_chopFilter_chopnet1_geometry1 (Chop/geometry)
+set _obj_geo1_chopFilter_chopnet1_geometry1 = `run("opadd -e -n -v geometry geometry1")`
+oplocate -x `$arg2 + 6.24695` -y `$arg3 + 3.95573` $_obj_geo1_chopFilter_chopnet1_geometry1
+chblockbegin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_geometry1 soppath
+chkey -t 0 -v 0 -m 0 -a 0.3333333432674408 -A 0.3333333432674408 -T a  -F '"../../IN"' $_obj_geo1_chopFilter_chopnet1_geometry1/soppath
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_geometry1 attribscope
+chkey -t 0 -v 0 -m 0 -a 0.3333333432674408 -A 0.3333333432674408 -T a  -F 'chs("../../channel1/attscope")' $_obj_geo1_chopFilter_chopnet1_geometry1/attribscope
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_geometry1 renamescope
+chkey -t 0 -v 0 -m 0 -a 0.3333333432674408 -A 0.3333333432674408 -T a  -F 'chs("../../channel1/chanscope")' $_obj_geo1_chopFilter_chopnet1_geometry1/renamescope
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_geometry1 organize
+chkey -t 0 -v 0 -m 0 -a 0.3333333432674408 -A 0.3333333432674408 -T a  -F 'chs("../../channel1/organize")' $_obj_geo1_chopFilter_chopnet1_geometry1/organize
+chadd -t 2.4166667461395264 2.4166667461395264 $_obj_geo1_chopFilter_chopnet1_geometry1 start
+chkey -t 2.4166667461395264 -v 59 -m 0 -a 0 -A 0 -T a  -F 'ch("../start")' $_obj_geo1_chopFilter_chopnet1_geometry1/start
+chadd -t 2.4166667461395264 2.4166667461395264 $_obj_geo1_chopFilter_chopnet1_geometry1 end
+chkey -t 2.4166667461395264 -v 60 -m 0 -a 0 -A 0 -T a  -F 'ch("../end")' $_obj_geo1_chopFilter_chopnet1_geometry1/end
+chadd -t 2.4166667461395264 2.4166667461395264 $_obj_geo1_chopFilter_chopnet1_geometry1 rate
+chkey -t 2.4166667461395264 -v 24 -m 0 -a 0 -A 0 -T a  -F 'ch("../sample_rate")' $_obj_geo1_chopFilter_chopnet1_geometry1/rate
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_geometry1 soppath ( soppath ) method ( animated ) attribscope ( attribscope ) renamescope ( renamescope ) organize ( organize ) range ( user ) start ( start ) end ( end ) rate ( rate ) units ( frames ) export ( ../../../../.. ) gcolor ( 0.89999997615814209 0.44999998807907104 0 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_geometry1
+opset -d off -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -a on -o off $_obj_geo1_chopFilter_chopnet1_geometry1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_geometry1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_geometry1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_geometry1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_geometry1
+
+# Node $_obj_geo1_chopFilter_chopnet1_OUT (Chop/null)
+set _obj_geo1_chopFilter_chopnet1_OUT = `run("opadd -e -n -v null OUT")`
+oplocate -x `$arg2 + 6.24695` -y `$arg3 + -0.742618` $_obj_geo1_chopFilter_chopnet1_OUT
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_OUT export ( ../../../../.. ) gcolor ( 0.89999997615814209 0.89999997615814209 0 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_OUT
+opset -d on -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -a off -o off $_obj_geo1_chopFilter_chopnet1_OUT
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_OUT
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_OUT
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_OUT
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_OUT
+
+# Node $_obj_geo1_chopFilter_chopnet1_normalize (Chop/limit)
+set _obj_geo1_chopFilter_chopnet1_normalize = `run("opadd -e -n -v limit normalize")`
+oplocate -x `$arg2 + 7.5853000000000002` -y `$arg3 + 2.84985` $_obj_geo1_chopFilter_chopnet1_normalize
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_normalize norm ( on ) export ( ../../../../.. ) gcolor ( 0.44999998807907104 0.89999997615814209 0 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_normalize
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -a off -o off $_obj_geo1_chopFilter_chopnet1_normalize
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_normalize
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_normalize
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_normalize
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_normalize
+opcf $_obj_geo1_chopFilter_chopnet1_vopchop1
+oporder -e global1 output1 fit1 destmin destmax 
+opcf ..
+
+# Node $_obj_geo1_chopFilter_chopnet1_filter1 (Chop/filter)
+set _obj_geo1_chopFilter_chopnet1_filter1 = `run("opadd -e -n -v filter filter1")`
+oplocate -x `$arg2 + 6.24695` -y `$arg3 + 0.116206` $_obj_geo1_chopFilter_chopnet1_filter1
+chblockbegin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_filter1 type
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../type")' $_obj_geo1_chopFilter_chopnet1_filter1/type
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_filter1 effect
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../effect")' $_obj_geo1_chopFilter_chopnet1_filter1/effect
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_filter1 width
+chkey -t 0 -v 12 -m 0 -a 0 -A 0 -T a  -F 'ch("../width")' $_obj_geo1_chopFilter_chopnet1_filter1/width
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_filter1 spike
+chkey -t 0 -v 0.10000000149011612 -m 0 -a 0 -A 0 -T a  -F 'ch("../spike")' $_obj_geo1_chopFilter_chopnet1_filter1/spike
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_filter1 passes
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../passes")' $_obj_geo1_chopFilter_chopnet1_filter1/passes
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_filter1 type ( type ) effect ( effect ) width ( width ) spike ( spike ) passes ( passes ) units ( frames ) export ( ../../../../.. ) gcolor ( 0 0.89999997615814209 0.44999998807907104 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_filter1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -a off -o off $_obj_geo1_chopFilter_chopnet1_filter1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_filter1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_filter1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_filter1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_filter1
+
+# Node $_obj_geo1_chopFilter_chopnet1_switch1 (Chop/switch)
+set _obj_geo1_chopFilter_chopnet1_switch1 = `run("opadd -e -n -v switch switch1")`
+oplocate -x `$arg2 + 6.24695` -y `$arg3 + 1.30609` $_obj_geo1_chopFilter_chopnet1_switch1
+chblockbegin
+chadd -t 0 0 $_obj_geo1_chopFilter_chopnet1_switch1 index
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../remap")' $_obj_geo1_chopFilter_chopnet1_switch1/index
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter_chopnet1_switch1 index ( index ) export ( ../../../../.. ) gcolor ( 0 0.89999997615814209 0 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_chopnet1_switch1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -a off -o off $_obj_geo1_chopFilter_chopnet1_switch1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_chopnet1_switch1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_chopnet1_switch1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_chopnet1_switch1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_chopnet1_switch1
+oporder -e geometry1 OUT normalize vopchop1 filter1 switch1 
+opcf ..
+
+# Node $_obj_geo1_chopFilter_channel1 (Sop/channel)
+set _obj_geo1_chopFilter_channel1 = `run("opadd -e -n -v channel channel1")`
+oplocate -x `$arg2 + 0.80704500000000001` -y `$arg3 + 0.206872` $_obj_geo1_chopFilter_channel1
+chblockbegin
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_channel1 group
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../group")' $_obj_geo1_chopFilter_channel1/group
+chadd -t 41.708333333333336 41.708333333333336 $_obj_geo1_chopFilter_channel1 attscope
+chkey -t 41.708333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../attscope")' $_obj_geo1_chopFilter_channel1/attscope
+chblockend
+opparm -V 19.5.368 $_obj_geo1_chopFilter_channel1 group ( group ) choppath ( ../chopnet1/OUT ) method ( animated ) chanscope ( '`chs("../attrib_type")' ) attscope ( attscope )
+chautoscope $_obj_geo1_chopFilter_channel1 +chanscope
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_channel1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_chopFilter_channel1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_channel1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_channel1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_channel1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_channel1
+
+# Node $_obj_geo1_chopFilter_IN (Sop/null)
+set _obj_geo1_chopFilter_IN = `run("opadd -e -n -v null IN")`
+oplocate -x `$arg2 + 0.80704500000000001` -y `$arg3 + 3.7559` $_obj_geo1_chopFilter_IN
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_IN
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_chopFilter_IN
+opexprlanguage -s hscript $_obj_geo1_chopFilter_IN
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_IN
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_IN
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_IN
+
+# Node $_obj_geo1_chopFilter_output1 (Sop/output)
+set _obj_geo1_chopFilter_output1 = `run("opadd -e -n -v output output1")`
+oplocate -x `$arg2 + 0.83213700000000002` -y `$arg3 + -1.7891999999999999` $_obj_geo1_chopFilter_output1
+opparm -V 19.5.368 $_obj_geo1_chopFilter_output1 outputidx ( 0 )
+chlock $_obj_geo1_chopFilter_output1 +outputidx
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_chopFilter_output1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_chopFilter_output1
+opexprlanguage -s hscript $_obj_geo1_chopFilter_output1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_chopFilter_output1
+opuserdata -n '___toolcount___' -v '78' $_obj_geo1_chopFilter_output1
+opuserdata -n '___toolid___' -v 'chop_filter1' $_obj_geo1_chopFilter_output1
+oporder -e chopnet1 channel1 IN output1 
+opcf ..
+opset -p on $_obj_geo1_chopFilter
+
+opcf $arg1
+opcf $_obj_geo1_chopFilter
+opcf $_obj_geo1_chopFilter_chopnet1
+opwire -n $_obj_geo1_chopFilter_chopnet1_filter1 -0 $_obj_geo1_chopFilter_chopnet1_OUT
+opwire -n $_obj_geo1_chopFilter_chopnet1_geometry1 -0 $_obj_geo1_chopFilter_chopnet1_normalize
+opwire -n $_obj_geo1_chopFilter_chopnet1_normalize -0 $_obj_geo1_chopFilter_chopnet1_vopchop1
+opcf $_obj_geo1_chopFilter_chopnet1_vopchop1
+opwire -n $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1 -0 $_obj_geo1_chopFilter_chopnet1_vopchop1_output1
+opwire -n $_obj_geo1_chopFilter_chopnet1_vopchop1_global1 -0 $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opwire -n $_obj_geo1_chopFilter_chopnet1_vopchop1_destmin -3 $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opwire -n $_obj_geo1_chopFilter_chopnet1_vopchop1_destmax -4 $_obj_geo1_chopFilter_chopnet1_vopchop1_fit1
+opcf ..
+opwire -n $_obj_geo1_chopFilter_chopnet1_switch1 -0 $_obj_geo1_chopFilter_chopnet1_filter1
+opwire -n $_obj_geo1_chopFilter_chopnet1_geometry1 -0 $_obj_geo1_chopFilter_chopnet1_switch1
+opwire -n $_obj_geo1_chopFilter_chopnet1_vopchop1 -1 $_obj_geo1_chopFilter_chopnet1_switch1
+opcf ..
+opwire -n $_obj_geo1_chopFilter_IN -0 $_obj_geo1_chopFilter_channel1
+opwire -n -i 0 -0 $_obj_geo1_chopFilter_IN
+opwire -n $_obj_geo1_chopFilter_channel1 -0 $_obj_geo1_chopFilter_output1
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_geo1_chopFilter
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_geo1_chopFilter
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

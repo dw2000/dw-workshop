@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="cull_by_missing_id" label="Cull by Missing id" icon="SOP_blast">
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribvop</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'null' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_swarm_0036_0050_calm_cull_by_missing_id (Sop/attribvop)
+set _obj_swarm_0036_0050_calm_cull_by_missing_id = `run("opadd -e -n -v attribvop cull_by_missing_id")`
+oplocate -x `$arg2 + 1.0064362891798035` -y `$arg3 + -1.7626414389110394` $_obj_swarm_0036_0050_calm_cull_by_missing_id
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "sepparm"         label   "Separator"         type    separator         default { "" }     }     parm {         name    "reverse"         label   "Reverse"         type    toggle         default { "off" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "sepparm2"         label   "Separator"         type    separator         default { "" }     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vexsnippet"             baseparm             label   "Snippet"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }         parm {             name    "vex_exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }         parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }     }      parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "id"         label   "Id"         type    integer         invisible         default { "-1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "uv"         label   "UV"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     } ' $_obj_swarm_0036_0050_calm_cull_by_missing_id
+opparm $_obj_swarm_0036_0050_calm_cull_by_missing_id  bindings ( 0 ) groupbindings ( 0 )
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_swarm_0036_0050_calm_cull_by_missing_id
+opexprlanguage -s hscript $_obj_swarm_0036_0050_calm_cull_by_missing_id
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0036_0050_calm_cull_by_missing_id
+opcf $_obj_swarm_0036_0050_calm_cull_by_missing_id
+
+# Node $_obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + 1.9057900000000001` -y `$arg3 + 1.97631` $_obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopglobal1
+opexprlanguage -s hscript $_obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopglobal1
+
+# Node $_obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 34.760674762401102` -y `$arg3 + 1.4278734843437968` $_obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopoutput1
+opexprlanguage -s hscript $_obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopoutput1
+
+# Node $_obj_swarm_0036_0050_calm_cull_by_missing_id_findattribval1 (Vop/findattribval)
+set _obj_swarm_0036_0050_calm_cull_by_missing_id_findattribval1 = `run("opadd -e -n -v findattribval findattribval1")`
+oplocate -x `$arg2 + 7.889234570685753` -y `$arg3 + 3.1463200959861362` $_obj_swarm_0036_0050_calm_cull_by_missing_id_findattribval1
+opparm $_obj_swarm_0036_0050_calm_cull_by_missing_id_findattribval1 signature ( i ) attrib ( id )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0036_0050_calm_cull_by_missing_id_findattribval1
+opexprlanguage -s hscript $_obj_swarm_0036_0050_calm_cull_by_missing_id_findattribval1
+opuserdata -n '___Version___' -v '' $_obj_swarm_0036_0050_calm_cull_by_missing_id_findattribval1
+
+# Node $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch1 (Vop/switch)
+set _obj_swarm_0036_0050_calm_cull_by_missing_id_switch1 = `run("opadd -e -n -v switch switch1")`
+oplocate -x `$arg2 + 25.437985029367979` -y `$arg3 + 1.3528734813635646` $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch1
+opexprlanguage -s hscript $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch1
+
+# Node $_obj_swarm_0036_0050_calm_cull_by_missing_id_const1 (Vop/constant)
+set _obj_swarm_0036_0050_calm_cull_by_missing_id_const1 = `run("opadd -e -n -v constant const1")`
+oplocate -x `$arg2 + 22.515042407641012` -y `$arg3 + 4.3588952006367512` $_obj_swarm_0036_0050_calm_cull_by_missing_id_const1
+opparm -V 19.5.368 $_obj_swarm_0036_0050_calm_cull_by_missing_id_const1 consttype ( int ) intdef ( -1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0036_0050_calm_cull_by_missing_id_const1
+opexprlanguage -s hscript $_obj_swarm_0036_0050_calm_cull_by_missing_id_const1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0036_0050_calm_cull_by_missing_id_const1
+
+# Node $_obj_swarm_0036_0050_calm_cull_by_missing_id_removepoint1 (Vop/removepoint)
+set _obj_swarm_0036_0050_calm_cull_by_missing_id_removepoint1 = `run("opadd -e -n -v removepoint removepoint1")`
+oplocate -x `$arg2 + 29.469194916805222` -y `$arg3 + 1.3528734813635643` $_obj_swarm_0036_0050_calm_cull_by_missing_id_removepoint1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0036_0050_calm_cull_by_missing_id_removepoint1
+opexprlanguage -s hscript $_obj_swarm_0036_0050_calm_cull_by_missing_id_removepoint1
+opuserdata -n '___Version___' -v '' $_obj_swarm_0036_0050_calm_cull_by_missing_id_removepoint1
+
+# Node $_obj_swarm_0036_0050_calm_cull_by_missing_id_compare1 (Vop/compare)
+set _obj_swarm_0036_0050_calm_cull_by_missing_id_compare1 = `run("opadd -e -n -v compare compare1")`
+oplocate -x `$arg2 + 11.02863181109789` -y `$arg3 + 3.3674431130779032` $_obj_swarm_0036_0050_calm_cull_by_missing_id_compare1
+opparm -V 19.5.368 $_obj_swarm_0036_0050_calm_cull_by_missing_id_compare1 input2_i ( -1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0036_0050_calm_cull_by_missing_id_compare1
+opexprlanguage -s hscript $_obj_swarm_0036_0050_calm_cull_by_missing_id_compare1
+
+# Node $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch2 (Vop/switch)
+set _obj_swarm_0036_0050_calm_cull_by_missing_id_switch2 = `run("opadd -e -n -v switch switch2")`
+oplocate -x `$arg2 + 17.374469707718855` -y `$arg3 + 5.7532043159225656` $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch2
+opexprlanguage -s hscript $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch2
+
+# Node $_obj_swarm_0036_0050_calm_cull_by_missing_id_complement1 (Vop/complement)
+set _obj_swarm_0036_0050_calm_cull_by_missing_id_complement1 = `run("opadd -e -n -v complement complement1")`
+oplocate -x `$arg2 + 14.690660152689771` -y `$arg3 + 3.8263201199024999` $_obj_swarm_0036_0050_calm_cull_by_missing_id_complement1
+opparm $_obj_swarm_0036_0050_calm_cull_by_missing_id_complement1 signature ( i )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0036_0050_calm_cull_by_missing_id_complement1
+opexprlanguage -s hscript $_obj_swarm_0036_0050_calm_cull_by_missing_id_complement1
+
+# Node $_obj_swarm_0036_0050_calm_cull_by_missing_id_switcher (Vop/parameter)
+set _obj_swarm_0036_0050_calm_cull_by_missing_id_switcher = `run("opadd -e -n -v parameter switcher")`
+oplocate -x `$arg2 + 15.074469695797927` -y `$arg3 + 6.3532043397644236` $_obj_swarm_0036_0050_calm_cull_by_missing_id_switcher
+opparm -V 19.5.368 $_obj_swarm_0036_0050_calm_cull_by_missing_id_switcher parmname ( reverse ) parmlabel ( Reverse ) parmtype ( toggle ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0036_0050_calm_cull_by_missing_id_switcher
+opexprlanguage -s hscript $_obj_swarm_0036_0050_calm_cull_by_missing_id_switcher
+opcf ..
+opcf $_obj_swarm_0036_0050_calm_cull_by_missing_id
+oporder -e geometryvopglobal1 geometryvopoutput1 findattribval1 switch1 const1 removepoint1 compare1 switch2 complement1 switcher 
+opcf ..
+opset -p on $_obj_swarm_0036_0050_calm_cull_by_missing_id
+opcf $arg1
+
+# Node $_obj_swarm_0036_0050_calm_input_points (Sop/null)
+set _obj_swarm_0036_0050_calm_input_points = `run("opadd -e -n -v null input_points")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_swarm_0036_0050_calm_input_points
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_swarm_0036_0050_calm_input_points
+opexprlanguage -s hscript $_obj_swarm_0036_0050_calm_input_points
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0036_0050_calm_input_points
+opset -p on $_obj_swarm_0036_0050_calm_input_points
+opcf $arg1
+
+# Node $_obj_swarm_0036_0050_calm_reference_points (Sop/null)
+set _obj_swarm_0036_0050_calm_reference_points = `run("opadd -e -n -v null reference_points")`
+oplocate -x `$arg2 + 2.6482155371147371` -y `$arg3 + 0` $_obj_swarm_0036_0050_calm_reference_points
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_swarm_0036_0050_calm_reference_points
+opexprlanguage -s hscript $_obj_swarm_0036_0050_calm_reference_points
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0036_0050_calm_reference_points
+opset -p on $_obj_swarm_0036_0050_calm_reference_points
+
+opcf $arg1
+opwire -n $_obj_swarm_0036_0050_calm_input_points -0 $_obj_swarm_0036_0050_calm_cull_by_missing_id
+opwire -n $_obj_swarm_0036_0050_calm_reference_points -1 $_obj_swarm_0036_0050_calm_cull_by_missing_id
+opcf $_obj_swarm_0036_0050_calm_cull_by_missing_id
+opwire -n -o 19 $_obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopglobal1 -0 $_obj_swarm_0036_0050_calm_cull_by_missing_id_findattribval1
+opwire -n -o 5 $_obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopglobal1 -3 $_obj_swarm_0036_0050_calm_cull_by_missing_id_findattribval1
+opwire -n $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch2 -0 $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch1
+opwire -n $_obj_swarm_0036_0050_calm_cull_by_missing_id_const1 -1 $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch1
+opwire -n -o 12 $_obj_swarm_0036_0050_calm_cull_by_missing_id_geometryvopglobal1 -2 $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch1
+opwire -n $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch1 -1 $_obj_swarm_0036_0050_calm_cull_by_missing_id_removepoint1
+opwire -n $_obj_swarm_0036_0050_calm_cull_by_missing_id_findattribval1 -0 $_obj_swarm_0036_0050_calm_cull_by_missing_id_compare1
+opwire -n $_obj_swarm_0036_0050_calm_cull_by_missing_id_switcher -0 $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch2
+opwire -n $_obj_swarm_0036_0050_calm_cull_by_missing_id_compare1 -1 $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch2
+opwire -n $_obj_swarm_0036_0050_calm_cull_by_missing_id_complement1 -2 $_obj_swarm_0036_0050_calm_cull_by_missing_id_switch2
+opwire -n $_obj_swarm_0036_0050_calm_cull_by_missing_id_compare1 -0 $_obj_swarm_0036_0050_calm_cull_by_missing_id_complement1
+opcf ..
+opcf $arg1
+opcf $arg1
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_swarm_0036_0050_calm_cull_by_missing_id
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_swarm_0036_0050_calm_input_points
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

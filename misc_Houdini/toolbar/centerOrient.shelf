@@ -1,0 +1,1086 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="centerOrient" label="centerOrient" icon="SOP_subnet">
+    <helpURL>operator:Sop/subnet</helpURL>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/subnet</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'subnet' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_geo1_reverse_transform (Sop/attribvop)
+set _obj_geo1_reverse_transform = `run("opadd -e -n -v attribvop reverse_transform")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_geo1_reverse_transform
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }     }      parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "id"         label   "Id"         type    integer         invisible         default { "-1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "uv"         label   "UV"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "parm_transform"         label   "transform"         type    float         size    16         default { "1" "0" "0" "0" "0" "1" "0" "0" "0" "0" "1" "0" "0" "0" "0" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "parm_invert"         label   "invert"         type    toggle         default { "off" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vex_inplace"         baseparm         label   "Compute Results In Place"         export  none     }     parm {         name    "vex_selectiongroup"         baseparm         label   "Output Selection Group"         export  none     }     parm {         name    "vexsnippet"         baseparm         label   "Snippet"         export  none     }     parm {         name    "vex_strict"         baseparm         label   "Enforce Prototypes"         export  none     }     parm {         name    "vex_exportlist"         baseparm         label   "Attributes to Create"         export  none     }     parm {         name    "vex_precision"         baseparm         label   "VEX Precision"         export  none     } ' $_obj_geo1_reverse_transform
+opparm $_obj_geo1_reverse_transform  bindings ( 0 ) groupbindings ( 0 )
+chblockbegin
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform1
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform1")' $_obj_geo1_reverse_transform/parm_transform1
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform2
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform2")' $_obj_geo1_reverse_transform/parm_transform2
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform3
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform3")' $_obj_geo1_reverse_transform/parm_transform3
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform4
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform4")' $_obj_geo1_reverse_transform/parm_transform4
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform5
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform5")' $_obj_geo1_reverse_transform/parm_transform5
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform6
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform6")' $_obj_geo1_reverse_transform/parm_transform6
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform7
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform7")' $_obj_geo1_reverse_transform/parm_transform7
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform8
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform8")' $_obj_geo1_reverse_transform/parm_transform8
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform9
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform9")' $_obj_geo1_reverse_transform/parm_transform9
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform10
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform10")' $_obj_geo1_reverse_transform/parm_transform10
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform11
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform11")' $_obj_geo1_reverse_transform/parm_transform11
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform12
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform12")' $_obj_geo1_reverse_transform/parm_transform12
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform13
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform13")' $_obj_geo1_reverse_transform/parm_transform13
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform14
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform14")' $_obj_geo1_reverse_transform/parm_transform14
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform15
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform15")' $_obj_geo1_reverse_transform/parm_transform15
+chadd -t 0 0 $_obj_geo1_reverse_transform parm_transform16
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../centerOrient/parm_transform16")' $_obj_geo1_reverse_transform/parm_transform16
+chblockend
+opparm -V 19.5.605 $_obj_geo1_reverse_transform vex_updatenmls ( on ) stdswitcher3 ( 1 1 ) parm_transform ( parm_transform1 parm_transform2 parm_transform3 parm_transform4 parm_transform5 parm_transform6 parm_transform7 parm_transform8 parm_transform9 parm_transform10 parm_transform11 parm_transform12 parm_transform13 parm_transform14 parm_transform15 parm_transform16 ) parm_invert ( on )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_reverse_transform
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_reverse_transform
+opexprlanguage -s hscript $_obj_geo1_reverse_transform
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_reverse_transform
+opcf $_obj_geo1_reverse_transform
+
+# Node $_obj_geo1_reverse_transform_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_geo1_reverse_transform_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + 1.9057900000000001` -y `$arg3 + 1.97631` $_obj_geo1_reverse_transform_geometryvopglobal1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_reverse_transform_geometryvopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_reverse_transform_geometryvopglobal1
+opexprlanguage -s hscript $_obj_geo1_reverse_transform_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_geo1_reverse_transform_geometryvopglobal1
+
+# Node $_obj_geo1_reverse_transform_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_geo1_reverse_transform_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 18.388200000000001` -y `$arg3 + 3.9270299999999998` $_obj_geo1_reverse_transform_geometryvopoutput1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_reverse_transform_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_reverse_transform_geometryvopoutput1
+opexprlanguage -s hscript $_obj_geo1_reverse_transform_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_geo1_reverse_transform_geometryvopoutput1
+
+# Node $_obj_geo1_reverse_transform_multiply1 (Vop/multiply)
+set _obj_geo1_reverse_transform_multiply1 = `run("opadd -e -n -v multiply multiply1")`
+oplocate -x `$arg2 + 14.2964` -y `$arg3 + 4.6591100000000001` $_obj_geo1_reverse_transform_multiply1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_reverse_transform_multiply1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_reverse_transform_multiply1
+opexprlanguage -s hscript $_obj_geo1_reverse_transform_multiply1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_reverse_transform_multiply1
+
+# Node $_obj_geo1_reverse_transform_parm1 (Vop/parameter)
+set _obj_geo1_reverse_transform_parm1 = `run("opadd -e -n -v parameter parm1")`
+oplocate -x `$arg2 + 5.8775500000000003` -y `$arg3 + 0.34924100000000002` $_obj_geo1_reverse_transform_parm1
+opparm -V 19.5.605 $_obj_geo1_reverse_transform_parm1 parmname ( parm_transform ) parmlabel ( transform ) parmtype ( float16 ) exportcontext ( cvex )
+opcolor -c 1 1 0.40000000596046448 $_obj_geo1_reverse_transform_parm1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_reverse_transform_parm1
+opexprlanguage -s hscript $_obj_geo1_reverse_transform_parm1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_reverse_transform_parm1
+
+# Node $_obj_geo1_reverse_transform_invert1 (Vop/invert)
+set _obj_geo1_reverse_transform_invert1 = `run("opadd -e -n -v invert invert1")`
+oplocate -x `$arg2 + 10.0806` -y `$arg3 + 0.94248699999999996` $_obj_geo1_reverse_transform_invert1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_reverse_transform_invert1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_reverse_transform_invert1
+opexprlanguage -s hscript $_obj_geo1_reverse_transform_invert1
+opuserdata -n '___Version___' -v '' $_obj_geo1_reverse_transform_invert1
+
+# Node $_obj_geo1_reverse_transform_switch1 (Vop/switch)
+set _obj_geo1_reverse_transform_switch1 = `run("opadd -e -n -v switch switch1")`
+oplocate -x `$arg2 + 12.228899999999999` -y `$arg3 + 2.4013` $_obj_geo1_reverse_transform_switch1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_reverse_transform_switch1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_reverse_transform_switch1
+opexprlanguage -s hscript $_obj_geo1_reverse_transform_switch1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_reverse_transform_switch1
+
+# Node $_obj_geo1_reverse_transform_parm2 (Vop/parameter)
+set _obj_geo1_reverse_transform_parm2 = `run("opadd -e -n -v parameter parm2")`
+oplocate -x `$arg2 + 7.5959099999999999` -y `$arg3 + -1.0763499999999999` $_obj_geo1_reverse_transform_parm2
+opparm -V 19.5.605 $_obj_geo1_reverse_transform_parm2 parmname ( parm_invert ) parmlabel ( invert ) parmtype ( toggle ) exportcontext ( cvex )
+opcolor -c 1 1 0.40000000596046448 $_obj_geo1_reverse_transform_parm2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_reverse_transform_parm2
+opexprlanguage -s hscript $_obj_geo1_reverse_transform_parm2
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_reverse_transform_parm2
+opcf ..
+opcf $_obj_geo1_reverse_transform
+oporder -e geometryvopglobal1 geometryvopoutput1 multiply1 parm1 invert1 switch1 parm2 
+opcf ..
+opset -p on $_obj_geo1_reverse_transform
+opcf $arg1
+
+# Node $_obj_geo1_centerOrient (Sop/subnet)
+set _obj_geo1_centerOrient = `run("opadd -e -n -v subnet centerOrient")`
+oplocate -x `$arg2 + -0.25277642002364509` -y `$arg3 + 2.3509433962264152` $_obj_geo1_centerOrient
+opspareds '    groupsimple {         name    "folder1"         label   "Transform"          parm {             name    "parm_transform"             label   "transform"             type    float             size    16             default { "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 0)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 1)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 2)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 3)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 4)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 5)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 6)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 7)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 8)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 9)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 10)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 11)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 12)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 13)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 14)" "point(\\"./TRANSFORMED\\", 0, \\"__rest_transform\\", 15)" }             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "cvex" }         }     }      groupsimple {         name    "folder2"         label   "Post Adjustment"          parm {             name    "trs"             label   "Transform Order"             type    integer             default { "0" }             menu {                 "srt"   "Scale Rotate Translate"                 "str"   "Scale Translate Rotate"                 "rst"   "Rotate Scale Translate"                 "rts"   "Rotate Translate Scale"                 "tsr"   "Translate Scale Rotate"                 "trs"   "Translate Rotate Scale"             }             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "cvex" }         }         parm {             name    "xyz"             label   "Rotation Order"             type    integer             default { "0" }             menu {                 "xyz"   "Rx Ry Rz"                 "xzy"   "Rx Rz Ry"                 "yxz"   "Ry Rx Rz"                 "yzx"   "Ry Rz Rx"                 "zxy"   "Rz Rx Ry"                 "zyx"   "Rz Ry Rx"             }             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "cvex" }         }         parm {             name    "trans"             label   "Translate"             type    float             size    3             default { "0" "0" "0" }             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "cvex" }         }         parm {             name    "rot"             label   "Rotate"             type    float             size    3             default { "0" "0" "0" }             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "cvex" }         }         parm {             name    "scale"             label   "Scale"             type    float             size    3             default { "1" "1" "1" }             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "cvex" }         }         parm {             name    "pivot"             label   "Pivot"             type    float             size    3             default { "0" "0" "0" }             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "cvex" }         }     }      parm {         name    "label1"         baseparm         label   "Input #1 Label"         invisible         export  all     }     parm {         name    "label2"         baseparm         label   "Input #2 Label"         invisible         export  all     }     parm {         name    "label3"         baseparm         label   "Input #3 Label"         invisible         export  all     }     parm {         name    "label4"         baseparm         label   "Input #4 Label"         invisible         export  all     } ' $_obj_geo1_centerOrient
+chblockbegin
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform1
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 0)' $_obj_geo1_centerOrient/parm_transform1
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform2
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 1)' $_obj_geo1_centerOrient/parm_transform2
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform3
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 2)' $_obj_geo1_centerOrient/parm_transform3
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform4
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 3)' $_obj_geo1_centerOrient/parm_transform4
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform5
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 4)' $_obj_geo1_centerOrient/parm_transform5
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform6
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 5)' $_obj_geo1_centerOrient/parm_transform6
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform7
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 6)' $_obj_geo1_centerOrient/parm_transform7
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform8
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 7)' $_obj_geo1_centerOrient/parm_transform8
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform9
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 8)' $_obj_geo1_centerOrient/parm_transform9
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform10
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 9)' $_obj_geo1_centerOrient/parm_transform10
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform11
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 10)' $_obj_geo1_centerOrient/parm_transform11
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform12
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 11)' $_obj_geo1_centerOrient/parm_transform12
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform13
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 12)' $_obj_geo1_centerOrient/parm_transform13
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform14
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 13)' $_obj_geo1_centerOrient/parm_transform14
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform15
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 14)' $_obj_geo1_centerOrient/parm_transform15
+chadd -t 0 0 $_obj_geo1_centerOrient parm_transform16
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'point("./TRANSFORMED", 0, "__rest_transform", 15)' $_obj_geo1_centerOrient/parm_transform16
+chblockend
+opparm -V 19.5.605 $_obj_geo1_centerOrient
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_centerOrient
+opexprlanguage -s hscript $_obj_geo1_centerOrient
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient
+opcf $_obj_geo1_centerOrient
+
+# Node $_obj_geo1_centerOrient_straighten (Sop/attribvop)
+set _obj_geo1_centerOrient_straighten = `run("opadd -e -n -v attribvop straighten")`
+oplocate -x `$arg2 + 1.2302500000000001` -y `$arg3 + 2.4860899999999999` $_obj_geo1_centerOrient_straighten
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }     }      parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "id"         label   "Id"         type    integer         invisible         default { "-1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "uv"         label   "UV"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vex_inplace"         baseparm         label   "Compute Results In Place"         export  none     }     parm {         name    "vex_selectiongroup"         baseparm         label   "Output Selection Group"         export  none     }     parm {         name    "vexsnippet"         baseparm         label   "Snippet"         export  none     }     parm {         name    "vex_strict"         baseparm         label   "Enforce Prototypes"         export  none     }     parm {         name    "vex_exportlist"         baseparm         label   "Attributes to Create"         export  none     }     parm {         name    "vex_precision"         baseparm         label   "VEX Precision"         export  none     } ' $_obj_geo1_centerOrient_straighten
+opparm $_obj_geo1_centerOrient_straighten  bindings ( 0 ) groupbindings ( 0 )
+opparm -V 19.5.605 $_obj_geo1_centerOrient_straighten vex_updatenmls ( on ) stdswitcher3 ( 1 1 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_centerOrient_straighten
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_straighten
+opcf $_obj_geo1_centerOrient_straighten
+
+# Node $_obj_geo1_centerOrient_straighten_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_geo1_centerOrient_straighten_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + -8.2792499999999993` -y `$arg3 + 1.9153199999999999` $_obj_geo1_centerOrient_straighten_geometryvopglobal1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_geometryvopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_geometryvopglobal1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_straighten_geometryvopglobal1
+
+# Node $_obj_geo1_centerOrient_straighten_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_geo1_centerOrient_straighten_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 42.826300000000003` -y `$arg3 + 4.6591100000000001` $_obj_geo1_centerOrient_straighten_geometryvopoutput1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_geometryvopoutput1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_straighten_geometryvopoutput1
+
+# Node $_obj_geo1_centerOrient_straighten_getattrib_N_0 (Vop/getattrib::2.0)
+set _obj_geo1_centerOrient_straighten_getattrib_N_0 = `run("opadd -e -n -v getattrib::2.0 getattrib_N_0")`
+oplocate -x `$arg2 + 4.8619000000000003` -y `$arg3 + 2.05586` $_obj_geo1_centerOrient_straighten_getattrib_N_0
+opparm $_obj_geo1_centerOrient_straighten_getattrib_N_0 atype ( prim ) attrib ( N )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_getattrib_N_0
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_getattrib_N_0
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_getattrib_N_0
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_straighten_getattrib_N_0
+
+# Node $_obj_geo1_centerOrient_straighten_getattrib_N_1 (Vop/getattrib::2.0)
+set _obj_geo1_centerOrient_straighten_getattrib_N_1 = `run("opadd -e -n -v getattrib::2.0 getattrib_N_1")`
+oplocate -x `$arg2 + 4.8619000000000003` -y `$arg3 + -2.7683` $_obj_geo1_centerOrient_straighten_getattrib_N_1
+opparm $_obj_geo1_centerOrient_straighten_getattrib_N_1 atype ( prim ) attrib ( N ) i1 ( 1 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_getattrib_N_1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_getattrib_N_1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_getattrib_N_1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_straighten_getattrib_N_1
+
+# Node $_obj_geo1_centerOrient_straighten_align1 (Vop/align)
+set _obj_geo1_centerOrient_straighten_align1 = `run("opadd -e -n -v align align1")`
+oplocate -x `$arg2 + 22.927199999999999` -y `$arg3 + 2.4783499999999998` $_obj_geo1_centerOrient_straighten_align1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_align1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_align1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_align1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_straighten_align1
+
+# Node $_obj_geo1_centerOrient_straighten_multiply1 (Vop/multiply)
+set _obj_geo1_centerOrient_straighten_multiply1 = `run("opadd -e -n -v multiply multiply1")`
+oplocate -x `$arg2 + 25.867000000000001` -y `$arg3 + -1.8877999999999999` $_obj_geo1_centerOrient_straighten_multiply1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_multiply1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_multiply1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_multiply1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_straighten_multiply1
+
+# Node $_obj_geo1_centerOrient_straighten_align2 (Vop/align)
+set _obj_geo1_centerOrient_straighten_align2 = `run("opadd -e -n -v align align2")`
+oplocate -x `$arg2 + 32.2136` -y `$arg3 + -1.9561599999999999` $_obj_geo1_centerOrient_straighten_align2
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_align2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_align2
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_align2
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_straighten_align2
+
+# Node $_obj_geo1_centerOrient_straighten_multiply3 (Vop/multiply)
+set _obj_geo1_centerOrient_straighten_multiply3 = `run("opadd -e -n -v multiply multiply3")`
+oplocate -x `$arg2 + 39.433300000000003` -y `$arg3 + 4.8003099999999996` $_obj_geo1_centerOrient_straighten_multiply3
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_multiply3
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_multiply3
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_multiply3
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_straighten_multiply3
+
+# Node $_obj_geo1_centerOrient_straighten_const1 (Vop/constant)
+set _obj_geo1_centerOrient_straighten_const1 = `run("opadd -e -n -v constant const1")`
+oplocate -x `$arg2 + 20.0184` -y `$arg3 + 0.89168899999999995` $_obj_geo1_centerOrient_straighten_const1
+opparm -V 19.5.605 $_obj_geo1_centerOrient_straighten_const1 consttype ( float3 ) float3def ( 1 0 0 )
+opcolor -c 0 0 0 $_obj_geo1_centerOrient_straighten_const1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_const1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_const1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_straighten_const1
+
+# Node $_obj_geo1_centerOrient_straighten_const2 (Vop/constant)
+set _obj_geo1_centerOrient_straighten_const2 = `run("opadd -e -n -v constant const2")`
+oplocate -x `$arg2 + 29.945900000000002` -y `$arg3 + -3.87161` $_obj_geo1_centerOrient_straighten_const2
+opparm -V 19.5.605 $_obj_geo1_centerOrient_straighten_const2 consttype ( float3 ) float3def ( 0 1 0 )
+opcolor -c 0 0 0 $_obj_geo1_centerOrient_straighten_const2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_const2
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_const2
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_straighten_const2
+
+# Node $_obj_geo1_centerOrient_straighten_dot1 (Vop/dot)
+set _obj_geo1_centerOrient_straighten_dot1 = `run("opadd -e -n -v dot dot1")`
+oplocate -x `$arg2 + 9.57836` -y `$arg3 + -0.604742` $_obj_geo1_centerOrient_straighten_dot1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_dot1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_dot1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_dot1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_straighten_dot1
+
+# Node $_obj_geo1_centerOrient_straighten_abs1 (Vop/abs)
+set _obj_geo1_centerOrient_straighten_abs1 = `run("opadd -e -n -v abs abs1")`
+oplocate -x `$arg2 + 11.472` -y `$arg3 + -0.46354200000000001` $_obj_geo1_centerOrient_straighten_abs1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_abs1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_abs1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_abs1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_straighten_abs1
+
+# Node $_obj_geo1_centerOrient_straighten_getattrib_N_2 (Vop/getattrib::2.0)
+set _obj_geo1_centerOrient_straighten_getattrib_N_2 = `run("opadd -e -n -v getattrib::2.0 getattrib_N_2")`
+oplocate -x `$arg2 + 5.0503099999999996` -y `$arg3 + -6.24411` $_obj_geo1_centerOrient_straighten_getattrib_N_2
+opparm $_obj_geo1_centerOrient_straighten_getattrib_N_2 atype ( prim ) attrib ( N ) i1 ( 2 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_getattrib_N_2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_getattrib_N_2
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_getattrib_N_2
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_straighten_getattrib_N_2
+
+# Node $_obj_geo1_centerOrient_straighten_compare1 (Vop/compare)
+set _obj_geo1_centerOrient_straighten_compare1 = `run("opadd -e -n -v compare compare1")`
+oplocate -x `$arg2 + 13.918100000000001` -y `$arg3 + -0.604742` $_obj_geo1_centerOrient_straighten_compare1
+opparm -V 19.5.605 $_obj_geo1_centerOrient_straighten_compare1 cmp ( gt ) input2 ( 0.5 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_compare1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_compare1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_compare1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_straighten_compare1
+
+# Node $_obj_geo1_centerOrient_straighten_switch1 (Vop/switch)
+set _obj_geo1_centerOrient_straighten_switch1 = `run("opadd -e -n -v switch switch1")`
+oplocate -x `$arg2 + 16.8508` -y `$arg3 + -2.0289999999999999` $_obj_geo1_centerOrient_straighten_switch1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_switch1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_switch1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_switch1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_straighten_switch1
+
+# Node $_obj_geo1_centerOrient_straighten_multiply4 (Vop/multiply)
+set _obj_geo1_centerOrient_straighten_multiply4 = `run("opadd -e -n -v multiply multiply4")`
+oplocate -x `$arg2 + 36.717799999999997` -y `$arg3 + 4.1930500000000004` $_obj_geo1_centerOrient_straighten_multiply4
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_multiply4
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_multiply4
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_multiply4
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_straighten_multiply4
+
+# Node $_obj_geo1_centerOrient_straighten_bind1 (Vop/bind)
+set _obj_geo1_centerOrient_straighten_bind1 = `run("opadd -e -n -v bind bind1")`
+oplocate -x `$arg2 + 45.834899999999998` -y `$arg3 + -6.6100000000000003` $_obj_geo1_centerOrient_straighten_bind1
+opparm -V 19.5.605 $_obj_geo1_centerOrient_straighten_bind1 parmname ( __rest_transform ) parmtype ( float16 ) overridetype ( on ) useasparmdefiner ( on ) exportparm ( whenconnected ) exportcontext ( cvex )
+opcolor -c 0.60000002384185791 0.60000002384185791 1 $_obj_geo1_centerOrient_straighten_bind1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_bind1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_bind1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_straighten_bind1
+
+# Node $_obj_geo1_centerOrient_straighten_bind2 (Vop/bind)
+set _obj_geo1_centerOrient_straighten_bind2 = `run("opadd -e -n -v bind bind2")`
+oplocate -x `$arg2 + 31.260999999999999` -y `$arg3 + -6.3743699999999999` $_obj_geo1_centerOrient_straighten_bind2
+opparm -V 19.5.605 $_obj_geo1_centerOrient_straighten_bind2 parmname ( __rest_transform ) parmtype ( float16 ) exportcontext ( cvex )
+opcolor -c 0.60000002384185791 0.60000002384185791 1 $_obj_geo1_centerOrient_straighten_bind2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_bind2
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_bind2
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_straighten_bind2
+
+# Node $_obj_geo1_centerOrient_straighten_multiply5 (Vop/multiply)
+set _obj_geo1_centerOrient_straighten_multiply5 = `run("opadd -e -n -v multiply multiply5")`
+oplocate -x `$arg2 + 41.919899999999998` -y `$arg3 + -2.3927` $_obj_geo1_centerOrient_straighten_multiply5
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_straighten_multiply5
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_straighten_multiply5
+opexprlanguage -s hscript $_obj_geo1_centerOrient_straighten_multiply5
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_straighten_multiply5
+opcf ..
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation (Sop/attribvop)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation = `run("opadd -e -n -v attribvop set_to_consistent_aribtrary_orientation")`
+oplocate -x `$arg2 + 0.90043499999999999` -y `$arg3 + 7.7445199999999996` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }     }      parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "id"         label   "Id"         type    integer         invisible         default { "-1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "uv"         label   "UV"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vex_inplace"         baseparm         label   "Compute Results In Place"         export  none     }     parm {         name    "vex_selectiongroup"         baseparm         label   "Output Selection Group"         export  none     }     parm {         name    "vexsnippet"         baseparm         label   "Snippet"         export  none     }     parm {         name    "vex_strict"         baseparm         label   "Enforce Prototypes"         export  none     }     parm {         name    "vex_exportlist"         baseparm         label   "Attributes to Create"         export  none     }     parm {         name    "vex_precision"         baseparm         label   "VEX Precision"         export  none     } ' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation
+opparm $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation  bindings ( 0 ) groupbindings ( 0 )
+opparm -V 19.5.605 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation vex_updatenmls ( on )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation
+opcf $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 42.761299999999999` -y `$arg3 + 2.0547499999999999` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopoutput1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopoutput1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopoutput1
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_0 (Vop/getattrib::2.0)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_0 = `run("opadd -e -n -v getattrib::2.0 getattrib_P_0")`
+oplocate -x `$arg2 + 7.2541500000000001` -y `$arg3 + 1.9135500000000001` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_0
+opparm $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_0 attrib ( P )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_0
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_0
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_0
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_0
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_1 (Vop/getattrib::2.0)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_1 = `run("opadd -e -n -v getattrib::2.0 getattrib_P_1")`
+oplocate -x `$arg2 + 7.0134299999999996` -y `$arg3 + -3.2663700000000002` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_1
+opparm $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_1 attrib ( P ) i1 ( 1 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_1
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align1 (Vop/align)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align1 = `run("opadd -e -n -v align align1")`
+oplocate -x `$arg2 + 15.584199999999999` -y `$arg3 + 2.4783499999999998` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align1
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply1 (Vop/multiply)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply1 = `run("opadd -e -n -v multiply multiply1")`
+oplocate -x `$arg2 + 22.6999` -y `$arg3 + -2.6903000000000001` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply1
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align2 (Vop/align)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align2 = `run("opadd -e -n -v align align2")`
+oplocate -x `$arg2 + 30.503399999999999` -y `$arg3 + -2.5491000000000001` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align2
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align2
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align2
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align2
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply2 (Vop/multiply)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply2 = `run("opadd -e -n -v multiply multiply2")`
+oplocate -x `$arg2 + 37.599600000000002` -y `$arg3 + 2.3371499999999998` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply2
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply2
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply2
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply2
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const1 (Vop/constant)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const1 = `run("opadd -e -n -v constant const1")`
+oplocate -x `$arg2 + 11.5166` -y `$arg3 + 1.05433` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const1
+opparm -V 19.5.605 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const1 consttype ( float3 ) float3def ( 1 0 0 )
+opcolor -c 0 0 0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const1
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const2 (Vop/constant)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const2 = `run("opadd -e -n -v constant const2")`
+oplocate -x `$arg2 + 27.930900000000001` -y `$arg3 + -3.87161` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const2
+opparm -V 19.5.605 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const2 consttype ( float3 ) float3def ( 0 1 0 )
+opcolor -c 0 0 0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const2
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const2
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const2
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_cross1 (Vop/cross)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_cross1 = `run("opadd -e -n -v cross cross1")`
+oplocate -x `$arg2 + 11.534599999999999` -y `$arg3 + -2.5491000000000001` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_cross1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_cross1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_cross1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_cross1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_cross1
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + 0.39881699999999998` -y `$arg3 + 3.7585700000000002` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopglobal1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopglobal1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopglobal1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopglobal1
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply3 (Vop/multiply)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply3 = `run("opadd -e -n -v multiply multiply3")`
+oplocate -x `$arg2 + 34.325800000000001` -y `$arg3 + 1.32698` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply3
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply3
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply3
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply3
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply3
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind1 (Vop/bind)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind1 = `run("opadd -e -n -v bind bind1")`
+oplocate -x `$arg2 + 41.695300000000003` -y `$arg3 + -1.98237` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind1
+opparm -V 19.5.605 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind1 parmname ( __rest_transform ) parmtype ( float16 ) overridetype ( on ) useasparmdefiner ( on ) exportparm ( whenconnected ) exportcontext ( cvex )
+opcolor -c 0.60000002384185791 0.60000002384185791 1 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind1
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind2 (Vop/bind)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind2 = `run("opadd -e -n -v bind bind2")`
+oplocate -x `$arg2 + 31.232700000000001` -y `$arg3 + -6.8598499999999998` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind2
+opparm -V 19.5.605 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind2 parmname ( __rest_transform ) parmtype ( float16 ) exportcontext ( cvex )
+opcolor -c 0.60000002384185791 0.60000002384185791 1 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind2
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind2
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind2
+
+# Node $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply4 (Vop/multiply)
+set _obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply4 = `run("opadd -e -n -v multiply multiply4")`
+oplocate -x `$arg2 + 38.9099` -y `$arg3 + -1.0633999999999999` $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply4
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply4
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply4
+opexprlanguage -s hscript $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply4
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply4
+opcf ..
+
+# Node $_obj_geo1_centerOrient_init__rest_transform (Sop/attribvop)
+set _obj_geo1_centerOrient_init__rest_transform = `run("opadd -e -n -v attribvop init__rest_transform")`
+oplocate -x `$arg2 + 0.062074499999999998` -y `$arg3 + 14.112` $_obj_geo1_centerOrient_init__rest_transform
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }     }      parm {         name    "vex_inplace"         baseparm         label   "Compute Results In Place"         export  none     }     parm {         name    "vex_selectiongroup"         baseparm         label   "Output Selection Group"         export  none     }     parm {         name    "vexsnippet"         baseparm         label   "Snippet"         export  none     }     parm {         name    "vex_strict"         baseparm         label   "Enforce Prototypes"         export  none     }     parm {         name    "vex_exportlist"         baseparm         label   "Attributes to Create"         export  none     }     parm {         name    "vex_precision"         baseparm         label   "VEX Precision"         export  none     } ' $_obj_geo1_centerOrient_init__rest_transform
+opparm $_obj_geo1_centerOrient_init__rest_transform  bindings ( 0 ) groupbindings ( 0 )
+opparm -V 19.5.605 $_obj_geo1_centerOrient_init__rest_transform vex_updatenmls ( on )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_init__rest_transform
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_centerOrient_init__rest_transform
+opexprlanguage -s hscript $_obj_geo1_centerOrient_init__rest_transform
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_init__rest_transform
+opcf $_obj_geo1_centerOrient_init__rest_transform
+
+# Node $_obj_geo1_centerOrient_init__rest_transform_bind1 (Vop/bind)
+set _obj_geo1_centerOrient_init__rest_transform_bind1 = `run("opadd -e -n -v bind bind1")`
+oplocate -x `$arg2 + 41.622300000000003` -y `$arg3 + -1.2218199999999999` $_obj_geo1_centerOrient_init__rest_transform_bind1
+opparm -V 19.5.605 $_obj_geo1_centerOrient_init__rest_transform_bind1 parmname ( __rest_transform ) parmtype ( float16 ) overridetype ( on ) useasparmdefiner ( on ) exportparm ( whenconnected ) exportcontext ( cvex )
+opcolor -c 0.60000002384185791 0.60000002384185791 1 $_obj_geo1_centerOrient_init__rest_transform_bind1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_init__rest_transform_bind1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_init__rest_transform_bind1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_init__rest_transform_bind1
+
+# Node $_obj_geo1_centerOrient_init__rest_transform_const1 (Vop/constant)
+set _obj_geo1_centerOrient_init__rest_transform_const1 = `run("opadd -e -n -v constant const1")`
+oplocate -x `$arg2 + 35.381100000000004` -y `$arg3 + -0.92887299999999995` $_obj_geo1_centerOrient_init__rest_transform_const1
+opparm -V 19.5.605 $_obj_geo1_centerOrient_init__rest_transform_const1 consttype ( float16 )
+opcolor -c 0 0 0 $_obj_geo1_centerOrient_init__rest_transform_const1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_init__rest_transform_const1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_init__rest_transform_const1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_init__rest_transform_const1
+opcf ..
+
+# Node $_obj_geo1_centerOrient_move_to_center1 (Sop/attribvop)
+set _obj_geo1_centerOrient_move_to_center1 = `run("opadd -e -n -v attribvop move_to_center1")`
+oplocate -x `$arg2 + 0.54549499999999995` -y `$arg3 + 13.153499999999999` $_obj_geo1_centerOrient_move_to_center1
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }     }      parm {         name    "trans"         label   "Translate"         type    float         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "id"         label   "Id"         type    integer         invisible         default { "-1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "uv"         label   "UV"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vex_inplace"         baseparm         label   "Compute Results In Place"         export  none     }     parm {         name    "vex_selectiongroup"         baseparm         label   "Output Selection Group"         export  none     }     parm {         name    "vexsnippet"         baseparm         label   "Snippet"         export  none     }     parm {         name    "vex_strict"         baseparm         label   "Enforce Prototypes"         export  none     }     parm {         name    "vex_exportlist"         baseparm         label   "Attributes to Create"         export  none     }     parm {         name    "vex_precision"         baseparm         label   "VEX Precision"         export  none     } ' $_obj_geo1_centerOrient_move_to_center1
+opparm $_obj_geo1_centerOrient_move_to_center1  bindings ( 0 ) groupbindings ( 0 )
+chblockbegin
+chadd -t 41.666666666666664 41.666666666666664 $_obj_geo1_centerOrient_move_to_center1 trans1
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F '-pointavg(opinputpath(".", 0), "P", 0)' $_obj_geo1_centerOrient_move_to_center1/trans1
+chadd -t 41.666666666666664 41.666666666666664 $_obj_geo1_centerOrient_move_to_center1 trans2
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F '-pointavg(opinputpath(".", 0), "P", 1)' $_obj_geo1_centerOrient_move_to_center1/trans2
+chadd -t 41.666666666666664 41.666666666666664 $_obj_geo1_centerOrient_move_to_center1 trans3
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F '-pointavg(opinputpath(".", 0), "P", 2)' $_obj_geo1_centerOrient_move_to_center1/trans3
+chblockend
+opparm -V 19.5.605 $_obj_geo1_centerOrient_move_to_center1 vex_updatenmls ( on ) trans ( trans1 trans2 trans3 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_move_to_center1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_centerOrient_move_to_center1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_move_to_center1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_move_to_center1
+opcf $_obj_geo1_centerOrient_move_to_center1
+
+# Node $_obj_geo1_centerOrient_move_to_center1_bind1 (Vop/bind)
+set _obj_geo1_centerOrient_move_to_center1_bind1 = `run("opadd -e -n -v bind bind1")`
+oplocate -x `$arg2 + 47.654899999999998` -y `$arg3 + -3.3858700000000002` $_obj_geo1_centerOrient_move_to_center1_bind1
+opparm -V 19.5.605 $_obj_geo1_centerOrient_move_to_center1_bind1 parmname ( __rest_transform ) parmtype ( float16 ) overridetype ( on ) useasparmdefiner ( on ) exportparm ( whenconnected ) exportcontext ( cvex )
+opcolor -c 0.60000002384185791 0.60000002384185791 1 $_obj_geo1_centerOrient_move_to_center1_bind1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_move_to_center1_bind1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_move_to_center1_bind1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_move_to_center1_bind1
+
+# Node $_obj_geo1_centerOrient_move_to_center1_bind2 (Vop/bind)
+set _obj_geo1_centerOrient_move_to_center1_bind2 = `run("opadd -e -n -v bind bind2")`
+oplocate -x `$arg2 + 35.631100000000004` -y `$arg3 + -3.1317599999999999` $_obj_geo1_centerOrient_move_to_center1_bind2
+opparm -V 19.5.605 $_obj_geo1_centerOrient_move_to_center1_bind2 parmname ( __rest_transform ) parmtype ( float16 ) exportcontext ( cvex )
+opcolor -c 0.60000002384185791 0.60000002384185791 1 $_obj_geo1_centerOrient_move_to_center1_bind2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_move_to_center1_bind2
+opexprlanguage -s hscript $_obj_geo1_centerOrient_move_to_center1_bind2
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_move_to_center1_bind2
+
+# Node $_obj_geo1_centerOrient_move_to_center1_multiply1 (Vop/multiply)
+set _obj_geo1_centerOrient_move_to_center1_multiply1 = `run("opadd -e -n -v multiply multiply1")`
+oplocate -x `$arg2 + 43.132300000000001` -y `$arg3 + -3.2729599999999999` $_obj_geo1_centerOrient_move_to_center1_multiply1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_move_to_center1_multiply1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_move_to_center1_multiply1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_move_to_center1_multiply1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_move_to_center1_multiply1
+
+# Node $_obj_geo1_centerOrient_move_to_center1_makexform1 (Vop/makexform)
+set _obj_geo1_centerOrient_move_to_center1_makexform1 = `run("opadd -e -n -v makexform makexform1")`
+oplocate -x `$arg2 + 35.881100000000004` -y `$arg3 + -6.2282099999999998` $_obj_geo1_centerOrient_move_to_center1_makexform1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_move_to_center1_makexform1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_move_to_center1_makexform1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_move_to_center1_makexform1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_move_to_center1_makexform1
+
+# Node $_obj_geo1_centerOrient_move_to_center1_trans (Vop/parameter)
+set _obj_geo1_centerOrient_move_to_center1_trans = `run("opadd -e -n -v parameter trans")`
+oplocate -x `$arg2 + 33.581099999999999` -y `$arg3 + -5.6282100000000002` $_obj_geo1_centerOrient_move_to_center1_trans
+opparm -V 19.5.605 $_obj_geo1_centerOrient_move_to_center1_trans parmname ( trans ) parmlabel ( Translate ) parmtype ( float3 ) exportcontext ( cvex )
+opcolor -c 1 1 0.40000000596046448 $_obj_geo1_centerOrient_move_to_center1_trans
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e off -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_move_to_center1_trans
+opexprlanguage -s hscript $_obj_geo1_centerOrient_move_to_center1_trans
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_move_to_center1_trans
+
+# Node $_obj_geo1_centerOrient_move_to_center1_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_geo1_centerOrient_move_to_center1_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + 32.149700000000003` -y `$arg3 + -1.5769599999999999` $_obj_geo1_centerOrient_move_to_center1_geometryvopglobal1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_move_to_center1_geometryvopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_move_to_center1_geometryvopglobal1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_move_to_center1_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_move_to_center1_geometryvopglobal1
+
+# Node $_obj_geo1_centerOrient_move_to_center1_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_geo1_centerOrient_move_to_center1_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 48.454000000000001` -y `$arg3 + -1.6733` $_obj_geo1_centerOrient_move_to_center1_geometryvopoutput1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_move_to_center1_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_move_to_center1_geometryvopoutput1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_move_to_center1_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_move_to_center1_geometryvopoutput1
+
+# Node $_obj_geo1_centerOrient_move_to_center1_multiply2 (Vop/multiply)
+set _obj_geo1_centerOrient_move_to_center1_multiply2 = `run("opadd -e -n -v multiply multiply2")`
+oplocate -x `$arg2 + 40.509300000000003` -y `$arg3 + 0.078239000000000003` $_obj_geo1_centerOrient_move_to_center1_multiply2
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_move_to_center1_multiply2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_move_to_center1_multiply2
+opexprlanguage -s hscript $_obj_geo1_centerOrient_move_to_center1_multiply2
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_move_to_center1_multiply2
+opcf ..
+
+# Node $_obj_geo1_centerOrient_post_adjustment (Sop/attribvop)
+set _obj_geo1_centerOrient_post_adjustment = `run("opadd -e -n -v attribvop post_adjustment")`
+oplocate -x `$arg2 + 1.2302500000000001` -y `$arg3 + -1.2479100000000001` $_obj_geo1_centerOrient_post_adjustment
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }     }      parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "id"         label   "Id"         type    integer         invisible         default { "-1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "uv"         label   "UV"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "trs"         label   "Transform Order"         type    integer         default { "0" }         menu {             "srt"   "Scale Rotate Translate"             "str"   "Scale Translate Rotate"             "rst"   "Rotate Scale Translate"             "rts"   "Rotate Translate Scale"             "tsr"   "Translate Scale Rotate"             "trs"   "Translate Rotate Scale"         }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "xyz"         label   "Rotation Order"         type    integer         default { "0" }         menu {             "xyz"   "Rx Ry Rz"             "xzy"   "Rx Rz Ry"             "yxz"   "Ry Rx Rz"             "yzx"   "Ry Rz Rx"             "zxy"   "Rz Rx Ry"             "zyx"   "Rz Ry Rx"         }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "trans"         label   "Translate"         type    float         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "rot"         label   "Rotate"         type    float         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "scale"         label   "Scale"         type    float         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "pivot"         label   "Pivot"         type    float         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vex_inplace"         baseparm         label   "Compute Results In Place"         export  none     }     parm {         name    "vex_selectiongroup"         baseparm         label   "Output Selection Group"         export  none     }     parm {         name    "vexsnippet"         baseparm         label   "Snippet"         export  none     }     parm {         name    "vex_strict"         baseparm         label   "Enforce Prototypes"         export  none     }     parm {         name    "vex_exportlist"         baseparm         label   "Attributes to Create"         export  none     }     parm {         name    "vex_precision"         baseparm         label   "VEX Precision"         export  none     } ' $_obj_geo1_centerOrient_post_adjustment
+opparm $_obj_geo1_centerOrient_post_adjustment  bindings ( 0 ) groupbindings ( 0 )
+chblockbegin
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment trs
+chkey -t 39.541666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../trs")' $_obj_geo1_centerOrient_post_adjustment/trs
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment xyz
+chkey -t 39.541666666666664 -v 5 -m 0 -a 0 -A 0 -T a  -F 'ch("../xyz")' $_obj_geo1_centerOrient_post_adjustment/xyz
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment trans1
+chkey -t 39.541666666666664 -v -12.859999999999999 -m 0 -a 0 -A 0 -T a  -F 'ch("../trans1")' $_obj_geo1_centerOrient_post_adjustment/trans1
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment trans2
+chkey -t 39.541666666666664 -v 45.420000000000002 -m 0 -a 0 -A 0 -T a  -F 'ch("../trans2")' $_obj_geo1_centerOrient_post_adjustment/trans2
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment trans3
+chkey -t 39.541666666666664 -v 22.309999999999999 -m 0 -a 0 -A 0 -T a  -F 'ch("../trans3")' $_obj_geo1_centerOrient_post_adjustment/trans3
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment rot1
+chkey -t 39.541666666666664 -v -87.689999999999998 -m 0 -a 0 -A 0 -T a  -F 'ch("../rot1")' $_obj_geo1_centerOrient_post_adjustment/rot1
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment rot2
+chkey -t 39.541666666666664 -v 35 -m 0 -a 0 -A 0 -T a  -F 'ch("../rot2")' $_obj_geo1_centerOrient_post_adjustment/rot2
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment rot3
+chkey -t 39.541666666666664 -v -5.0599999999999996 -m 0 -a 0 -A 0 -T a  -F 'ch("../rot3")' $_obj_geo1_centerOrient_post_adjustment/rot3
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment scale1
+chkey -t 39.541666666666664 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../scale1")' $_obj_geo1_centerOrient_post_adjustment/scale1
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment scale2
+chkey -t 39.541666666666664 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../scale2")' $_obj_geo1_centerOrient_post_adjustment/scale2
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment scale3
+chkey -t 39.541666666666664 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../scale3")' $_obj_geo1_centerOrient_post_adjustment/scale3
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment pivot1
+chkey -t 39.541666666666664 -v 19.260999999999999 -m 0 -a 0 -A 0 -T a  -F 'ch("../pivot1")' $_obj_geo1_centerOrient_post_adjustment/pivot1
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment pivot2
+chkey -t 39.541666666666664 -v 7.2468000000000004 -m 0 -a 0 -A 0 -T a  -F 'ch("../pivot2")' $_obj_geo1_centerOrient_post_adjustment/pivot2
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_post_adjustment pivot3
+chkey -t 39.541666666666664 -v -13.557499999999999 -m 0 -a 0 -A 0 -T a  -F 'ch("../pivot3")' $_obj_geo1_centerOrient_post_adjustment/pivot3
+chblockend
+opparm -V 19.5.605 $_obj_geo1_centerOrient_post_adjustment vex_updatenmls ( on ) stdswitcher3 ( 1 1 ) trs ( trs ) xyz ( xyz ) trans ( trans1 trans2 trans3 ) rot ( rot1 rot2 rot3 ) scale ( scale1 scale2 scale3 ) pivot ( pivot1 pivot2 pivot3 )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_post_adjustment
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_centerOrient_post_adjustment
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_post_adjustment
+opcf $_obj_geo1_centerOrient_post_adjustment
+
+# Node $_obj_geo1_centerOrient_post_adjustment_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_geo1_centerOrient_post_adjustment_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + -8.2792499999999993` -y `$arg3 + 1.9153199999999999` $_obj_geo1_centerOrient_post_adjustment_geometryvopglobal1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_post_adjustment_geometryvopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_post_adjustment_geometryvopglobal1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_post_adjustment_geometryvopglobal1
+
+# Node $_obj_geo1_centerOrient_post_adjustment_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_geo1_centerOrient_post_adjustment_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 56.486199999999997` -y `$arg3 + 4.6098400000000002` $_obj_geo1_centerOrient_post_adjustment_geometryvopoutput1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_post_adjustment_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_post_adjustment_geometryvopoutput1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_post_adjustment_geometryvopoutput1
+
+# Node $_obj_geo1_centerOrient_post_adjustment_bind1 (Vop/bind)
+set _obj_geo1_centerOrient_post_adjustment_bind1 = `run("opadd -e -n -v bind bind1")`
+oplocate -x `$arg2 + 45.834899999999998` -y `$arg3 + -6.6100000000000003` $_obj_geo1_centerOrient_post_adjustment_bind1
+opparm -V 19.5.605 $_obj_geo1_centerOrient_post_adjustment_bind1 parmname ( __rest_transform ) parmtype ( float16 ) overridetype ( on ) useasparmdefiner ( on ) exportparm ( whenconnected ) exportcontext ( cvex )
+opcolor -c 0.60000002384185791 0.60000002384185791 1 $_obj_geo1_centerOrient_post_adjustment_bind1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_post_adjustment_bind1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment_bind1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_post_adjustment_bind1
+
+# Node $_obj_geo1_centerOrient_post_adjustment_bind2 (Vop/bind)
+set _obj_geo1_centerOrient_post_adjustment_bind2 = `run("opadd -e -n -v bind bind2")`
+oplocate -x `$arg2 + 31.260999999999999` -y `$arg3 + -6.3743699999999999` $_obj_geo1_centerOrient_post_adjustment_bind2
+opparm -V 19.5.605 $_obj_geo1_centerOrient_post_adjustment_bind2 parmname ( __rest_transform ) parmtype ( float16 ) exportcontext ( cvex )
+opcolor -c 0.60000002384185791 0.60000002384185791 1 $_obj_geo1_centerOrient_post_adjustment_bind2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_post_adjustment_bind2
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment_bind2
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_post_adjustment_bind2
+
+# Node $_obj_geo1_centerOrient_post_adjustment_multiply5 (Vop/multiply)
+set _obj_geo1_centerOrient_post_adjustment_multiply5 = `run("opadd -e -n -v multiply multiply5")`
+oplocate -x `$arg2 + 41.919899999999998` -y `$arg3 + -2.3927` $_obj_geo1_centerOrient_post_adjustment_multiply5
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_post_adjustment_multiply5
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_post_adjustment_multiply5
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment_multiply5
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_post_adjustment_multiply5
+
+# Node $_obj_geo1_centerOrient_post_adjustment_multiply1 (Vop/multiply)
+set _obj_geo1_centerOrient_post_adjustment_multiply1 = `run("opadd -e -n -v multiply multiply1")`
+oplocate -x `$arg2 + 41.919899999999998` -y `$arg3 + 4.3087499999999999` $_obj_geo1_centerOrient_post_adjustment_multiply1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_post_adjustment_multiply1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_post_adjustment_multiply1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment_multiply1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_post_adjustment_multiply1
+
+# Node $_obj_geo1_centerOrient_post_adjustment_makexform1 (Vop/makexform)
+set _obj_geo1_centerOrient_post_adjustment_makexform1 = `run("opadd -e -n -v makexform makexform1")`
+oplocate -x `$arg2 + 32.994900000000001` -y `$arg3 + 1.61612` $_obj_geo1_centerOrient_post_adjustment_makexform1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_post_adjustment_makexform1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_post_adjustment_makexform1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment_makexform1
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_post_adjustment_makexform1
+
+# Node $_obj_geo1_centerOrient_post_adjustment_trs (Vop/parameter)
+set _obj_geo1_centerOrient_post_adjustment_trs = `run("opadd -e -n -v parameter trs")`
+oplocate -x `$arg2 + 30.494900000000001` -y `$arg3 + 2.61612` $_obj_geo1_centerOrient_post_adjustment_trs
+opparm -V 19.5.605 $_obj_geo1_centerOrient_post_adjustment_trs parmname ( trs ) parmlabel ( 'Transform Order' ) parmtype ( int ) exportcontext ( cvex ) providemenu ( on ) menuchoices ( 'srt "Scale Rotate Translate" str "Scale Translate Rotate" rst "Rotate Scale Translate" rts "Rotate Translate Scale" tsr "Translate Scale Rotate" trs "Translate Rotate Scale" ' )
+opcolor -c 1 1 0.40000000596046448 $_obj_geo1_centerOrient_post_adjustment_trs
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e off -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_post_adjustment_trs
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment_trs
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_post_adjustment_trs
+
+# Node $_obj_geo1_centerOrient_post_adjustment_xyz (Vop/parameter)
+set _obj_geo1_centerOrient_post_adjustment_xyz = `run("opadd -e -n -v parameter xyz")`
+oplocate -x `$arg2 + 30.594899999999999` -y `$arg3 + 2.4161199999999998` $_obj_geo1_centerOrient_post_adjustment_xyz
+opparm -V 19.5.605 $_obj_geo1_centerOrient_post_adjustment_xyz parmname ( xyz ) parmlabel ( 'Rotation Order' ) parmtype ( int ) exportcontext ( cvex ) providemenu ( on ) menuchoices ( 'xyz "Rx Ry Rz" xzy "Rx Rz Ry" yxz "Ry Rx Rz" yzx "Ry Rz Rx" zxy "Rz Rx Ry" zyx "Rz Ry Rx" ' )
+opcolor -c 1 1 0.40000000596046448 $_obj_geo1_centerOrient_post_adjustment_xyz
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e off -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_post_adjustment_xyz
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment_xyz
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_post_adjustment_xyz
+
+# Node $_obj_geo1_centerOrient_post_adjustment_trans (Vop/parameter)
+set _obj_geo1_centerOrient_post_adjustment_trans = `run("opadd -e -n -v parameter trans")`
+oplocate -x `$arg2 + 30.694900000000001` -y `$arg3 + 2.2161200000000001` $_obj_geo1_centerOrient_post_adjustment_trans
+opparm -V 19.5.605 $_obj_geo1_centerOrient_post_adjustment_trans parmname ( trans ) parmlabel ( Translate ) parmtype ( float3 ) exportcontext ( cvex )
+opcolor -c 1 1 0.40000000596046448 $_obj_geo1_centerOrient_post_adjustment_trans
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e off -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_post_adjustment_trans
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment_trans
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_post_adjustment_trans
+
+# Node $_obj_geo1_centerOrient_post_adjustment_rot (Vop/parameter)
+set _obj_geo1_centerOrient_post_adjustment_rot = `run("opadd -e -n -v parameter rot")`
+oplocate -x `$arg2 + 30.794899999999998` -y `$arg3 + 2.0161199999999999` $_obj_geo1_centerOrient_post_adjustment_rot
+opparm -V 19.5.605 $_obj_geo1_centerOrient_post_adjustment_rot parmname ( rot ) parmlabel ( Rotate ) parmtype ( float3 ) exportcontext ( cvex )
+opcolor -c 1 1 0.40000000596046448 $_obj_geo1_centerOrient_post_adjustment_rot
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e off -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_post_adjustment_rot
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment_rot
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_post_adjustment_rot
+
+# Node $_obj_geo1_centerOrient_post_adjustment_scale (Vop/parameter)
+set _obj_geo1_centerOrient_post_adjustment_scale = `run("opadd -e -n -v parameter scale")`
+oplocate -x `$arg2 + 30.8949` -y `$arg3 + 1.81612` $_obj_geo1_centerOrient_post_adjustment_scale
+opparm -V 19.5.605 $_obj_geo1_centerOrient_post_adjustment_scale parmname ( scale ) parmlabel ( Scale ) parmtype ( float3 ) float3def ( 1 1 1 ) exportcontext ( cvex )
+opcolor -c 1 1 0.40000000596046448 $_obj_geo1_centerOrient_post_adjustment_scale
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e off -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_post_adjustment_scale
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment_scale
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_post_adjustment_scale
+
+# Node $_obj_geo1_centerOrient_post_adjustment_pivot (Vop/parameter)
+set _obj_geo1_centerOrient_post_adjustment_pivot = `run("opadd -e -n -v parameter pivot")`
+oplocate -x `$arg2 + 30.994900000000001` -y `$arg3 + 1.61612` $_obj_geo1_centerOrient_post_adjustment_pivot
+opparm -V 19.5.605 $_obj_geo1_centerOrient_post_adjustment_pivot parmname ( pivot ) parmlabel ( Pivot ) parmtype ( float3 ) exportcontext ( cvex )
+opcolor -c 1 1 0.40000000596046448 $_obj_geo1_centerOrient_post_adjustment_pivot
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e off -b off -L off -M off -H on -E off $_obj_geo1_centerOrient_post_adjustment_pivot
+opexprlanguage -s hscript $_obj_geo1_centerOrient_post_adjustment_pivot
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_post_adjustment_pivot
+opcf ..
+opcf ..
+opcf $_obj_geo1_centerOrient
+opcf $_obj_geo1_centerOrient_straighten
+oporder -e geometryvopglobal1 geometryvopoutput1 getattrib_N_0 getattrib_N_1 align1 multiply1 align2 multiply3 const1 const2 dot1 abs1 getattrib_N_2 compare1 switch1 multiply4 bind1 bind2 multiply5 
+opcf ..
+opcf $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation
+oporder -e geometryvopoutput1 getattrib_P_0 getattrib_P_1 align1 multiply1 align2 multiply2 const1 const2 cross1 geometryvopglobal1 multiply3 bind1 bind2 multiply4 
+opcf ..
+opcf $_obj_geo1_centerOrient_init__rest_transform
+oporder -e bind1 const1 
+opcf ..
+opcf $_obj_geo1_centerOrient_move_to_center1
+oporder -e bind1 bind2 multiply1 makexform1 trans geometryvopglobal1 geometryvopoutput1 multiply2 
+opcf ..
+opcf $_obj_geo1_centerOrient_post_adjustment
+oporder -e geometryvopglobal1 geometryvopoutput1 bind1 bind2 multiply5 multiply1 makexform1 trs xyz trans rot scale pivot 
+opcf ..
+
+# Node $_obj_geo1_centerOrient_oriented_bbox (Sop/box)
+set _obj_geo1_centerOrient_oriented_bbox = `run("opadd -e -n -v box oriented_bbox")`
+oplocate -x `$arg2 + 2.1004299999999998` -y `$arg3 + 5.7241400000000002` $_obj_geo1_centerOrient_oriented_bbox
+opparm -V 19.5.605 $_obj_geo1_centerOrient_oriented_bbox orientedbbox ( on )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_oriented_bbox
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_centerOrient_oriented_bbox
+opexprlanguage -s hscript $_obj_geo1_centerOrient_oriented_bbox
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_oriented_bbox
+
+# Node $_obj_geo1_centerOrient_normal1 (Sop/normal)
+set _obj_geo1_centerOrient_normal1 = `run("opadd -e -n -v normal normal1")`
+oplocate -x `$arg2 + 2.1004299999999998` -y `$arg3 + 5.0082599999999999` $_obj_geo1_centerOrient_normal1
+opparm -V 19.5.605 $_obj_geo1_centerOrient_normal1 type ( typeprim ) origifzero ( off )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_normal1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_centerOrient_normal1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_normal1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_normal1
+
+# Node $_obj_geo1_centerOrient_null2 (Sop/null)
+set _obj_geo1_centerOrient_null2 = `run("opadd -e -n -v null null2")`
+oplocate -x `$arg2 + 0.52808500000000003` -y `$arg3 + 17.575600000000001` $_obj_geo1_centerOrient_null2
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_null2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_centerOrient_null2
+opexprlanguage -s hscript $_obj_geo1_centerOrient_null2
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_null2
+
+# Node $_obj_geo1_centerOrient_sort2 (Sop/sort)
+set _obj_geo1_centerOrient_sort2 = `run("opadd -e -n -v sort sort2")`
+oplocate -x `$arg2 + 1.6144799999999999` -y `$arg3 + 9.5335300000000007` $_obj_geo1_centerOrient_sort2
+chblockbegin
+chadd -t 41.666666666666664 41.666666666666664 $_obj_geo1_centerOrient_sort2 pointoffset
+chkey -t 41.666666666666664 -v 23 -m 0 -a 0 -A 0 -T a  -F 'ch("../ref_pointoffset")' $_obj_geo1_centerOrient_sort2/pointoffset
+chblockend
+opparm -V 19.5.605 $_obj_geo1_centerOrient_sort2 ptsort ( shif ) pointoffset ( pointoffset ) vertexprimorder ( off )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_sort2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_centerOrient_sort2
+opexprlanguage -s hscript $_obj_geo1_centerOrient_sort2
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_sort2
+
+# Node $_obj_geo1_centerOrient_attribdelete___rest_transform (Sop/attribdelete)
+set _obj_geo1_centerOrient_attribdelete___rest_transform = `run("opadd -e -n -v attribdelete attribdelete___rest_transform")`
+oplocate -x `$arg2 + 5.5668699999999998` -y `$arg3 + -12.651300000000001` $_obj_geo1_centerOrient_attribdelete___rest_transform
+opparm $_obj_geo1_centerOrient_attribdelete___rest_transform ptdel ( __rest_transform )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_attribdelete___rest_transform
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off $_obj_geo1_centerOrient_attribdelete___rest_transform
+opexprlanguage -s hscript $_obj_geo1_centerOrient_attribdelete___rest_transform
+opuserdata -n '___Version___' -v '' $_obj_geo1_centerOrient_attribdelete___rest_transform
+
+# Node $_obj_geo1_centerOrient_TRANSFORMED (Sop/null)
+set _obj_geo1_centerOrient_TRANSFORMED = `run("opadd -e -n -v null TRANSFORMED")`
+oplocate -x `$arg2 + 5.27766` -y `$arg3 + -11.139900000000001` $_obj_geo1_centerOrient_TRANSFORMED
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_TRANSFORMED
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_centerOrient_TRANSFORMED
+opexprlanguage -s hscript $_obj_geo1_centerOrient_TRANSFORMED
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_TRANSFORMED
+
+# Node $_obj_geo1_centerOrient_output1 (Sop/output)
+set _obj_geo1_centerOrient_output1 = `run("opadd -e -n -v output output1")`
+oplocate -x `$arg2 + 5.5668699999999998` -y `$arg3 + -14.5382` $_obj_geo1_centerOrient_output1
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_output1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_centerOrient_output1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_output1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_output1
+
+# Node $_obj_geo1_centerOrient_sort1 (Sop/sort)
+set _obj_geo1_centerOrient_sort1 = `run("opadd -e -n -v sort sort1")`
+oplocate -x `$arg2 + 2.1004299999999998` -y `$arg3 + 4.0225200000000001` $_obj_geo1_centerOrient_sort1
+chblockbegin
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_sort1 primproxx
+chkey -t 39.541666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'bbox(opinputpath(".", 0), D_XMIN)' $_obj_geo1_centerOrient_sort1/primproxx
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_sort1 primproxy
+chkey -t 39.541666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'bbox(opinputpath(".", 0), D_YMIN)' $_obj_geo1_centerOrient_sort1/primproxy
+chadd -t 39.541666666666664 39.541666666666664 $_obj_geo1_centerOrient_sort1 primproxz
+chkey -t 39.541666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'bbox(opinputpath(".", 0), D_ZMIN)' $_obj_geo1_centerOrient_sort1/primproxz
+chblockend
+opparm -V 19.5.605 $_obj_geo1_centerOrient_sort1 primsort ( prox ) primprox ( primproxx primproxy primproxz ) vertexprimorder ( off )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_centerOrient_sort1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_centerOrient_sort1
+opexprlanguage -s hscript $_obj_geo1_centerOrient_sort1
+opuserdata -n '___Version___' -v '19.5.605' $_obj_geo1_centerOrient_sort1
+oporder -e straighten set_to_consistent_aribtrary_orientation init__rest_transform move_to_center1 post_adjustment oriented_bbox normal1 null2 sort2 attribdelete___rest_transform TRANSFORMED output1 sort1 
+opcf ..
+opset -p on $_obj_geo1_centerOrient
+
+opcf $arg1
+opwire -n $_obj_geo1_centerOrient -0 $_obj_geo1_reverse_transform
+opcf $_obj_geo1_reverse_transform
+opwire -n $_obj_geo1_reverse_transform_multiply1 -0 $_obj_geo1_reverse_transform_geometryvopoutput1
+opwire -n $_obj_geo1_reverse_transform_geometryvopglobal1 -0 $_obj_geo1_reverse_transform_multiply1
+opwire -n $_obj_geo1_reverse_transform_switch1 -1 $_obj_geo1_reverse_transform_multiply1
+opwire -n $_obj_geo1_reverse_transform_parm1 -0 $_obj_geo1_reverse_transform_invert1
+opwire -n $_obj_geo1_reverse_transform_parm2 -0 $_obj_geo1_reverse_transform_switch1
+opwire -n $_obj_geo1_reverse_transform_parm1 -1 $_obj_geo1_reverse_transform_switch1
+opwire -n $_obj_geo1_reverse_transform_invert1 -2 $_obj_geo1_reverse_transform_switch1
+opcf ..
+opcf $arg1
+opwire -n $_obj_geo1_transform1 -0 $_obj_geo1_centerOrient
+opcf $_obj_geo1_centerOrient
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation -0 $_obj_geo1_centerOrient_straighten
+opwire -n $_obj_geo1_centerOrient_sort1 -1 $_obj_geo1_centerOrient_straighten
+opcf $_obj_geo1_centerOrient_straighten
+opwire -n $_obj_geo1_centerOrient_straighten_multiply3 -0 $_obj_geo1_centerOrient_straighten_geometryvopoutput1
+opwire -n -o 19 $_obj_geo1_centerOrient_straighten_geometryvopglobal1 -0 $_obj_geo1_centerOrient_straighten_getattrib_N_0
+opwire -n -o 19 $_obj_geo1_centerOrient_straighten_geometryvopglobal1 -0 $_obj_geo1_centerOrient_straighten_getattrib_N_1
+opwire -n $_obj_geo1_centerOrient_straighten_getattrib_N_0 -0 $_obj_geo1_centerOrient_straighten_align1
+opwire -n $_obj_geo1_centerOrient_straighten_const1 -1 $_obj_geo1_centerOrient_straighten_align1
+opwire -n $_obj_geo1_centerOrient_straighten_switch1 -0 $_obj_geo1_centerOrient_straighten_multiply1
+opwire -n $_obj_geo1_centerOrient_straighten_align1 -1 $_obj_geo1_centerOrient_straighten_multiply1
+opwire -n $_obj_geo1_centerOrient_straighten_multiply1 -0 $_obj_geo1_centerOrient_straighten_align2
+opwire -n $_obj_geo1_centerOrient_straighten_const2 -1 $_obj_geo1_centerOrient_straighten_align2
+opwire -n $_obj_geo1_centerOrient_straighten_geometryvopglobal1 -0 $_obj_geo1_centerOrient_straighten_multiply3
+opwire -n $_obj_geo1_centerOrient_straighten_multiply4 -1 $_obj_geo1_centerOrient_straighten_multiply3
+opwire -n $_obj_geo1_centerOrient_straighten_getattrib_N_0 -0 $_obj_geo1_centerOrient_straighten_dot1
+opwire -n $_obj_geo1_centerOrient_straighten_getattrib_N_1 -1 $_obj_geo1_centerOrient_straighten_dot1
+opwire -n $_obj_geo1_centerOrient_straighten_dot1 -0 $_obj_geo1_centerOrient_straighten_abs1
+opwire -n -o 19 $_obj_geo1_centerOrient_straighten_geometryvopglobal1 -0 $_obj_geo1_centerOrient_straighten_getattrib_N_2
+opwire -n $_obj_geo1_centerOrient_straighten_abs1 -0 $_obj_geo1_centerOrient_straighten_compare1
+opwire -n $_obj_geo1_centerOrient_straighten_compare1 -0 $_obj_geo1_centerOrient_straighten_switch1
+opwire -n $_obj_geo1_centerOrient_straighten_getattrib_N_1 -1 $_obj_geo1_centerOrient_straighten_switch1
+opwire -n $_obj_geo1_centerOrient_straighten_getattrib_N_2 -2 $_obj_geo1_centerOrient_straighten_switch1
+opwire -n $_obj_geo1_centerOrient_straighten_align1 -0 $_obj_geo1_centerOrient_straighten_multiply4
+opwire -n $_obj_geo1_centerOrient_straighten_align2 -1 $_obj_geo1_centerOrient_straighten_multiply4
+opwire -n $_obj_geo1_centerOrient_straighten_multiply5 -0 $_obj_geo1_centerOrient_straighten_bind1
+opwire -n $_obj_geo1_centerOrient_straighten_bind2 -0 $_obj_geo1_centerOrient_straighten_multiply5
+opwire -n $_obj_geo1_centerOrient_straighten_multiply4 -1 $_obj_geo1_centerOrient_straighten_multiply5
+opcf ..
+opwire -n $_obj_geo1_centerOrient_move_to_center1 -0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation
+opwire -n $_obj_geo1_centerOrient_sort2 -1 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation
+opcf $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply2 -0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopoutput1
+opwire -n -o 19 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopglobal1 -0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_0
+opwire -n -o 19 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopglobal1 -0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_1
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_0 -0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align1
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const1 -1 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align1
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_cross1 -0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply1
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align1 -1 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply1
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply1 -0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align2
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_const2 -1 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align2
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_geometryvopglobal1 -0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply2
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply3 -1 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply2
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_0 -0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_cross1
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_getattrib_P_1 -1 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_cross1
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align1 -0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply3
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_align2 -1 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply3
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply4 -0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind1
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_bind2 -0 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply4
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply3 -1 $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation_multiply4
+opcf ..
+opwire -n $_obj_geo1_centerOrient_null2 -0 $_obj_geo1_centerOrient_init__rest_transform
+opcf $_obj_geo1_centerOrient_init__rest_transform
+opwire -n $_obj_geo1_centerOrient_init__rest_transform_const1 -0 $_obj_geo1_centerOrient_init__rest_transform_bind1
+opcf ..
+opwire -n $_obj_geo1_centerOrient_init__rest_transform -0 $_obj_geo1_centerOrient_move_to_center1
+opcf $_obj_geo1_centerOrient_move_to_center1
+opwire -n $_obj_geo1_centerOrient_move_to_center1_multiply1 -0 $_obj_geo1_centerOrient_move_to_center1_bind1
+opwire -n $_obj_geo1_centerOrient_move_to_center1_bind2 -0 $_obj_geo1_centerOrient_move_to_center1_multiply1
+opwire -n $_obj_geo1_centerOrient_move_to_center1_makexform1 -1 $_obj_geo1_centerOrient_move_to_center1_multiply1
+opwire -n $_obj_geo1_centerOrient_move_to_center1_trans -2 $_obj_geo1_centerOrient_move_to_center1_makexform1
+opwire -n $_obj_geo1_centerOrient_move_to_center1_multiply2 -0 $_obj_geo1_centerOrient_move_to_center1_geometryvopoutput1
+opwire -n $_obj_geo1_centerOrient_move_to_center1_geometryvopglobal1 -0 $_obj_geo1_centerOrient_move_to_center1_multiply2
+opwire -n $_obj_geo1_centerOrient_move_to_center1_makexform1 -1 $_obj_geo1_centerOrient_move_to_center1_multiply2
+opcf ..
+opwire -n $_obj_geo1_centerOrient_straighten -0 $_obj_geo1_centerOrient_post_adjustment
+opcf $_obj_geo1_centerOrient_post_adjustment
+opwire -n $_obj_geo1_centerOrient_post_adjustment_multiply1 -0 $_obj_geo1_centerOrient_post_adjustment_geometryvopoutput1
+opwire -n $_obj_geo1_centerOrient_post_adjustment_multiply5 -0 $_obj_geo1_centerOrient_post_adjustment_bind1
+opwire -n $_obj_geo1_centerOrient_post_adjustment_bind2 -0 $_obj_geo1_centerOrient_post_adjustment_multiply5
+opwire -n $_obj_geo1_centerOrient_post_adjustment_makexform1 -1 $_obj_geo1_centerOrient_post_adjustment_multiply5
+opwire -n $_obj_geo1_centerOrient_post_adjustment_geometryvopglobal1 -0 $_obj_geo1_centerOrient_post_adjustment_multiply1
+opwire -n $_obj_geo1_centerOrient_post_adjustment_makexform1 -1 $_obj_geo1_centerOrient_post_adjustment_multiply1
+opwire -n $_obj_geo1_centerOrient_post_adjustment_trs -0 $_obj_geo1_centerOrient_post_adjustment_makexform1
+opwire -n $_obj_geo1_centerOrient_post_adjustment_xyz -1 $_obj_geo1_centerOrient_post_adjustment_makexform1
+opwire -n $_obj_geo1_centerOrient_post_adjustment_trans -2 $_obj_geo1_centerOrient_post_adjustment_makexform1
+opwire -n $_obj_geo1_centerOrient_post_adjustment_rot -3 $_obj_geo1_centerOrient_post_adjustment_makexform1
+opwire -n $_obj_geo1_centerOrient_post_adjustment_scale -4 $_obj_geo1_centerOrient_post_adjustment_makexform1
+opwire -n $_obj_geo1_centerOrient_post_adjustment_pivot -6 $_obj_geo1_centerOrient_post_adjustment_makexform1
+opcf ..
+opwire -n $_obj_geo1_centerOrient_set_to_consistent_aribtrary_orientation -0 $_obj_geo1_centerOrient_oriented_bbox
+opwire -n $_obj_geo1_centerOrient_oriented_bbox -0 $_obj_geo1_centerOrient_normal1
+opwire -n -i 0 -0 $_obj_geo1_centerOrient_null2
+opwire -n $_obj_geo1_centerOrient_move_to_center1 -0 $_obj_geo1_centerOrient_sort2
+opwire -n $_obj_geo1_centerOrient_TRANSFORMED -0 $_obj_geo1_centerOrient_attribdelete___rest_transform
+opwire -n $_obj_geo1_centerOrient_post_adjustment -0 $_obj_geo1_centerOrient_TRANSFORMED
+opwire -n $_obj_geo1_centerOrient_attribdelete___rest_transform -0 $_obj_geo1_centerOrient_output1
+opwire -n $_obj_geo1_centerOrient_normal1 -0 $_obj_geo1_centerOrient_sort1
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_geo1_centerOrient
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_geo1_reverse_transform
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

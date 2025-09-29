@@ -1,0 +1,462 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="DW_intersect_curves" label="DW Intersect Curves" icon="SOP_subnet">
+    <helpURL>operator:Sop/subnet</helpURL>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/subnet</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'subnet' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_geo1_curve_intersector1 (Sop/subnet)
+set _obj_geo1_curve_intersector1 = `run("opadd -e -n -v subnet curve_intersector1")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_geo1_curve_intersector1
+opspareds '    parm {         name    "label1"         baseparm         label   "Input #1 Label"         invisible         export  all     }     parm {         name    "label2"         baseparm         label   "Input #2 Label"         invisible         export  all     }     parm {         name    "label3"         baseparm         label   "Input #3 Label"         invisible         export  all     }     parm {         name    "label4"         baseparm         label   "Input #4 Label"         invisible         export  all     }     parm {         name    "output_mode"         label   "Output Mode"         type    ordinal         default { "0" }         menu {             "0" "Curve with new points"             "1" "New points only"         }         parmtag { "script_callback_language" "python" }     }     parm {         name    "added_points_group"         label   "Added Points Group"         type    string         default { "new_points" }         disablewhen "{ output_mode == 1 }"         parmtag { "autoscope" "0000000000000000" }         parmtag { "script_callback_language" "python" }     } ' $_obj_geo1_curve_intersector1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_curve_intersector1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1
+opcf $_obj_geo1_curve_intersector1
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point (Sop/attribvop)
+set _obj_geo1_curve_intersector1_isolate_current_point = `run("opadd -e -n -v attribvop isolate_current_point")`
+oplocate -x `$arg2 + -7.0842553303633657` -y `$arg3 + -18.746484671066177` $_obj_geo1_curve_intersector1_isolate_current_point
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"         grouptag { "sidefx::switcher" "stdswitcher" }          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vexsnippet"             baseparm             label   "Snippet"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }         parm {             name    "vex_exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }         parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }     }      parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "id"         label   "Id"         type    integer         invisible         default { "-1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "uv"         label   "UV"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     } ' $_obj_geo1_curve_intersector1_isolate_current_point
+opparm $_obj_geo1_curve_intersector1_isolate_current_point  bindings ( 0 ) groupbindings ( 0 )
+opparm -V 20.5.370 $_obj_geo1_curve_intersector1_isolate_current_point bindgrouptype ( points )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_curve_intersector1_isolate_current_point
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_isolate_current_point
+opcf $_obj_geo1_curve_intersector1_isolate_current_point
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_geo1_curve_intersector1_isolate_current_point_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + -9.6935453303633654` -y `$arg3 + -11.34448467106618` $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopglobal1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopglobal1
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_geo1_curve_intersector1_isolate_current_point_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 35.253894669636637` -y `$arg3 + -12.58407467106618` $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopoutput1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopoutput1
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_const2 (Vop/constant)
+set _obj_geo1_curve_intersector1_isolate_current_point_const2 = `run("opadd -e -n -v constant const2")`
+oplocate -x `$arg2 + 10.219794669636634` -y `$arg3 + -17.978804671066179` $_obj_geo1_curve_intersector1_isolate_current_point_const2
+opparm -V 20.5.370 $_obj_geo1_curve_intersector1_isolate_current_point_const2 consttype ( int ) intdef ( -1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_const2
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_const2
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_isolate_current_point_const2
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_switch1 (Vop/switch)
+set _obj_geo1_curve_intersector1_isolate_current_point_switch1 = `run("opadd -e -n -v switch switch1")`
+oplocate -x `$arg2 + 18.949194669636633` -y `$arg3 + -15.594994671066178` $_obj_geo1_curve_intersector1_isolate_current_point_switch1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_switch1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_switch1
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_isolate_current_point_switch1
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_removepoint1 (Vop/removepoint)
+set _obj_geo1_curve_intersector1_isolate_current_point_removepoint1 = `run("opadd -e -n -v removepoint removepoint1")`
+oplocate -x `$arg2 + 22.060094669636634` -y `$arg3 + -15.594994671066178` $_obj_geo1_curve_intersector1_isolate_current_point_removepoint1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_removepoint1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_removepoint1
+opuserdata -n '___Version___' -v '' $_obj_geo1_curve_intersector1_isolate_current_point_removepoint1
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_compare1 (Vop/compare)
+set _obj_geo1_curve_intersector1_isolate_current_point_compare1 = `run("opadd -e -n -v compare compare1")`
+oplocate -x `$arg2 + 8.8778946696366337` -y `$arg3 + -12.697454671066179` $_obj_geo1_curve_intersector1_isolate_current_point_compare1
+opparm -V 20.5.370 $_obj_geo1_curve_intersector1_isolate_current_point_compare1 cmp ( neq )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_compare1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_compare1
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_isolate_current_point_compare1
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_getattrib1 (Vop/getattrib::2.0)
+set _obj_geo1_curve_intersector1_isolate_current_point_getattrib1 = `run("opadd -e -n -v getattrib::2.0 getattrib1")`
+oplocate -x `$arg2 + 4.7430946696366334` -y `$arg3 + -18.25871467106618` $_obj_geo1_curve_intersector1_isolate_current_point_getattrib1
+opparm $_obj_geo1_curve_intersector1_isolate_current_point_getattrib1 signature ( i ) atype ( detail ) attrib ( iteration )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_getattrib1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_getattrib1
+opuserdata -n '___Version___' -v '' $_obj_geo1_curve_intersector1_isolate_current_point_getattrib1
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_xyzdist1 (Vop/xyzdist)
+set _obj_geo1_curve_intersector1_isolate_current_point_xyzdist1 = `run("opadd -e -n -v xyzdist xyzdist1")`
+oplocate -x `$arg2 + 9.5163946696366342` -y `$arg3 + -7.8046946710661791` $_obj_geo1_curve_intersector1_isolate_current_point_xyzdist1
+chblockbegin
+chadd -t 40 40 $_obj_geo1_curve_intersector1_isolate_current_point_xyzdist1 group
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs(\'../group/stringdef\')' $_obj_geo1_curve_intersector1_isolate_current_point_xyzdist1/group
+chblockend
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_xyzdist1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_xyzdist1
+opuserdata -n '___Version___' -v '' $_obj_geo1_curve_intersector1_isolate_current_point_xyzdist1
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_bind1 (Vop/bind)
+set _obj_geo1_curve_intersector1_isolate_current_point_bind1 = `run("opadd -e -n -v bind bind1")`
+oplocate -x `$arg2 + 29.855994669636633` -y `$arg3 + -11.454074671066179` $_obj_geo1_curve_intersector1_isolate_current_point_bind1
+opparm -V 20.5.370 $_obj_geo1_curve_intersector1_isolate_current_point_bind1 parmname ( prim_u ) overridetype ( on ) useasparmdefiner ( on ) exportparm ( whenconnected ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_bind1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_bind1
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_isolate_current_point_bind1
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_vectofloat1 (Vop/vectofloat)
+set _obj_geo1_curve_intersector1_isolate_current_point_vectofloat1 = `run("opadd -e -n -v vectofloat vectofloat1")`
+oplocate -x `$arg2 + 17.132894669636634` -y `$arg3 + -8.351294671066178` $_obj_geo1_curve_intersector1_isolate_current_point_vectofloat1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_vectofloat1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_vectofloat1
+opuserdata -n '___Version___' -v '' $_obj_geo1_curve_intersector1_isolate_current_point_vectofloat1
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_switch2 (Vop/switch)
+set _obj_geo1_curve_intersector1_isolate_current_point_switch2 = `run("opadd -e -n -v switch switch2")`
+oplocate -x `$arg2 + 24.453494669636633` -y `$arg3 + -11.454074671066179` $_obj_geo1_curve_intersector1_isolate_current_point_switch2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_switch2
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_switch2
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_isolate_current_point_switch2
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_complement1 (Vop/complement)
+set _obj_geo1_curve_intersector1_isolate_current_point_complement1 = `run("opadd -e -n -v complement complement1")`
+oplocate -x `$arg2 + 17.908894669636634` -y `$arg3 + -11.859234671066179` $_obj_geo1_curve_intersector1_isolate_current_point_complement1
+opparm $_obj_geo1_curve_intersector1_isolate_current_point_complement1 signature ( i )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_complement1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_complement1
+opuserdata -n '___Version___' -v '' $_obj_geo1_curve_intersector1_isolate_current_point_complement1
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_const1 (Vop/constant)
+set _obj_geo1_curve_intersector1_isolate_current_point_const1 = `run("opadd -e -n -v constant const1")`
+oplocate -x `$arg2 + 17.908894669636634` -y `$arg3 + -10.555744671066179` $_obj_geo1_curve_intersector1_isolate_current_point_const1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_const1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_const1
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_isolate_current_point_const1
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_bind2 (Vop/bind)
+set _obj_geo1_curve_intersector1_isolate_current_point_bind2 = `run("opadd -e -n -v bind bind2")`
+oplocate -x `$arg2 + -6.1312003303633658` -y `$arg3 + -6.974694671066179` $_obj_geo1_curve_intersector1_isolate_current_point_bind2
+opparm -V 20.5.370 $_obj_geo1_curve_intersector1_isolate_current_point_bind2 parmname ( source_prim ) parmtype ( int ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_bind2
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_bind2
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_isolate_current_point_bind2
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_const3 (Vop/constant)
+set _obj_geo1_curve_intersector1_isolate_current_point_const3 = `run("opadd -e -n -v constant const3")`
+oplocate -x `$arg2 + -6.5090653303633657` -y `$arg3 + -8.8530146710661786` $_obj_geo1_curve_intersector1_isolate_current_point_const3
+opparm -V 20.5.370 $_obj_geo1_curve_intersector1_isolate_current_point_const3 consttype ( string )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_const3
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_const3
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_isolate_current_point_const3
+
+# Node $_obj_geo1_curve_intersector1_isolate_current_point_snippet1 (Vop/snippet)
+set _obj_geo1_curve_intersector1_isolate_current_point_snippet1 = `run("opadd -e -n -v snippet snippet1")`
+oplocate -x `$arg2 + -0.21581930131997762` -y `$arg3 + -7.8046947009430081` $_obj_geo1_curve_intersector1_isolate_current_point_snippet1
+opparm $_obj_geo1_curve_intersector1_isolate_current_point_snippet1  namenum ( 2 )
+opparm -V 20.5.370 $_obj_geo1_curve_intersector1_isolate_current_point_snippet1 code ( 'group_mask = itoa(source_prim);' ) namenum ( 2 ) name1 ( group_mask )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_geo1_curve_intersector1_isolate_current_point_snippet1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_current_point_snippet1
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_isolate_current_point_snippet1
+opcf ..
+opcf ..
+opcf $_obj_geo1_curve_intersector1
+opcf $_obj_geo1_curve_intersector1_isolate_current_point
+oporder -e geometryvopglobal1 geometryvopoutput1 const2 switch1 removepoint1 compare1 getattrib1 xyzdist1 bind1 vectofloat1 switch2 complement1 const1 bind2 const3 snippet1 
+opcf ..
+
+# Node $_obj_geo1_curve_intersector1_add_intersect_points (Sop/attribwrangle)
+set _obj_geo1_curve_intersector1_add_intersect_points = `run("opadd -e -n -v attribwrangle add_intersect_points")`
+oplocate -x `$arg2 + -6.3501653303633656` -y `$arg3 + -10.577684671066178` $_obj_geo1_curve_intersector1_add_intersect_points
+opspareds '    group {         name    "folder1"         label   "Code"          parm {             name    "group"             baseparm             label   "Group"             export  none             bindselector uvselect "Modify Attribs"                 "Select the geometry to affect and press Enter to complete."                 0 1 0xffffffff 0 grouptype 0         }         parm {             name    "grouptype"             baseparm             label   "Group Type"             export  none         }         parm {             name    "class"             baseparm             label   "Run Over"             export  none         }         parm {             name    "vex_numcount"             baseparm             label   "Number Count"             export  none         }         parm {             name    "vex_threadjobsize"             baseparm             label   "Thread Job Size"             export  none         }         groupsimple {             name    "folder_generatedparms_snippet"             label   "Generated Channel Parameters"             grouptag { "sidefx::look" "blank" }          }          parm {             name    "snippet"             baseparm             label   "VEXpression"             export  all         }         parm {             name    "exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }     }      group {         name    "folder1_1"         label   "Bindings"          parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }         parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }     }  ' $_obj_geo1_curve_intersector1_add_intersect_points
+opparm $_obj_geo1_curve_intersector1_add_intersect_points  bindings ( 0 ) groupbindings ( 0 )
+opparm $_obj_geo1_curve_intersector1_add_intersect_points class ( vertex ) snippet ( '\n\nint prim_vtx = vertexprimindex(0, i@vtxnum);\nstring prim_intersection_group = "";\nvector origin = v@P;\nvector test_ray;\nvector intersect_P[];\nint intersect_prim[];\nvector intersect_uvw[];\nint new_point;\nint intersect_count;\n\n\nif (prim_vtx < primvertexcount(0, i@primnum) - 1) {\n    int next_vtx = vertexindex(0, i@primnum, prim_vtx + 1);\n    int next_point = vertexpoint(0, next_vtx);\n    test_ray = point(0, "P", next_point) - origin;\n\n    intersect_count = intersect_all(1, prim_intersection_group, origin, test_ray, intersect_P, intersect_prim, intersect_uvw); //, tol=0.01, ttol=0.01);\n    if (intersect_count > 0) {\n            for (int i = 0; i < intersect_count; i++) {\n                new_point = addpoint(0, @ptnum);\n                setpointattrib(0, "source_prim", new_point, i@primnum);\n                setpointattrib(0, "P", new_point, intersect_P[i]);\n                setpointattrib(0, "intersect_prim", new_point, intersect_prim[i]);\n                setpointattrib(0, "intersect_uvw", new_point, intersect_uvw[i]);\n                setpointattrib(0, "ray_dir", new_point, normalize(test_ray));\n            }\n    }\n    \n   \n    \n}\n\n\n' )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_curve_intersector1_add_intersect_points
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_add_intersect_points
+opuserdata -n '___Version___' -v '' $_obj_geo1_curve_intersector1_add_intersect_points
+opuserdata -n '___toolcount___' -v '123' $_obj_geo1_curve_intersector1_add_intersect_points
+opuserdata -n '___toolid___' -v 'get_prim_u' $_obj_geo1_curve_intersector1_add_intersect_points
+
+# Node $_obj_geo1_curve_intersector1_refine2 (Sop/refine)
+set _obj_geo1_curve_intersector1_refine2 = `run("opadd -e -n -v refine refine2")`
+oplocate -x `$arg2 + -8.9504253303633661` -y `$arg3 + -20.151284671066179` $_obj_geo1_curve_intersector1_refine2
+chblockbegin
+chadd -t 40 40 $_obj_geo1_curve_intersector1_refine2 domainu1
+chkey -t 40 -v 0.96636999999999995 -m 0 -a 0 -A 0 -T a  -F 'point("../isolate_current_point", 0, "prim_u", 0)' $_obj_geo1_curve_intersector1_refine2/domainu1
+chblockend
+opparm -V 20.5.370 $_obj_geo1_curve_intersector1_refine2 group ( '`point("../isolate_current_point", 0, "source_prim", 0) ' ) domainu1 ( domainu1 ) domainu2 ( 0.585 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_curve_intersector1_refine2
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_refine2
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_refine2
+
+# Node $_obj_geo1_curve_intersector1_foreach_end1 (Sop/block_end)
+set _obj_geo1_curve_intersector1_foreach_end1 = `run("opadd -e -n -v block_end foreach_end1")`
+oplocate -x `$arg2 + -8.8109953303633652` -y `$arg3 + -23.886884671066177` $_obj_geo1_curve_intersector1_foreach_end1
+chblockbegin
+chadd -t 40 40 $_obj_geo1_curve_intersector1_foreach_end1 iterations
+chkey -t 40 -v 10 -m 0 -a 0 -A 0 -T a  -F 'npoints("../isolate_new_points")' $_obj_geo1_curve_intersector1_foreach_end1/iterations
+chblockend
+opparm -V 20.5.370 $_obj_geo1_curve_intersector1_foreach_end1 itermethod ( count ) iterations ( iterations ) startvalue ( 0 ) class ( primitive ) useattrib ( off ) maxiter ( 2 ) blockpath ( ../foreach_begin1 ) templatepath ( ../foreach_begin1 )
+opcolor -c 0.75 0.40000000596046448 0 $_obj_geo1_curve_intersector1_foreach_end1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_curve_intersector1_foreach_end1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_foreach_end1
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_foreach_end1
+
+# Node $_obj_geo1_curve_intersector1_foreach_begin1 (Sop/block_begin)
+set _obj_geo1_curve_intersector1_foreach_begin1 = `run("opadd -e -n -v block_begin foreach_begin1")`
+oplocate -x `$arg2 + -8.8109953303633652` -y `$arg3 + -16.740284671066178` $_obj_geo1_curve_intersector1_foreach_begin1
+opparm -V 20.5.370 $_obj_geo1_curve_intersector1_foreach_begin1 blockpath ( ../foreach_end1 )
+opcolor -c 0.75 0.40000000596046448 0 $_obj_geo1_curve_intersector1_foreach_begin1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_curve_intersector1_foreach_begin1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_foreach_begin1
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_foreach_begin1
+
+# Node $_obj_geo1_curve_intersector1_foreach_begin1_metadata1 (Sop/block_begin)
+set _obj_geo1_curve_intersector1_foreach_begin1_metadata1 = `run("opadd -e -n -v block_begin foreach_begin1_metadata1")`
+oplocate -x `$arg2 + -5.8109953303633661` -y `$arg3 + -15.108784671066179` $_obj_geo1_curve_intersector1_foreach_begin1_metadata1
+opparm -V 20.5.370 $_obj_geo1_curve_intersector1_foreach_begin1_metadata1 method ( metadata ) blockpath ( ../foreach_end1 )
+opcolor -c 0.75 0.40000000596046448 0 $_obj_geo1_curve_intersector1_foreach_begin1_metadata1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_curve_intersector1_foreach_begin1_metadata1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_foreach_begin1_metadata1
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_foreach_begin1_metadata1
+
+# Node $_obj_geo1_curve_intersector1_group_new_points (Sop/attribwrangle)
+set _obj_geo1_curve_intersector1_group_new_points = `run("opadd -e -n -v attribwrangle group_new_points")`
+oplocate -x `$arg2 + -9.6288753303633658` -y `$arg3 + -28.179684671066177` $_obj_geo1_curve_intersector1_group_new_points
+opspareds '    group {         name    "folder1"         label   "Code"          parm {             name    "group"             baseparm             label   "Group"             export  none             bindselector uvselect "Modify Attribs"                 "Select the geometry to affect and press Enter to complete."                 0 1 0xffffffff 0 grouptype 0         }         parm {             name    "grouptype"             baseparm             label   "Group Type"             export  none         }         parm {             name    "class"             baseparm             label   "Run Over"             export  none         }         parm {             name    "vex_numcount"             baseparm             label   "Number Count"             export  none         }         parm {             name    "vex_threadjobsize"             baseparm             label   "Thread Job Size"             export  none         }         groupsimple {             name    "folder_generatedparms_snippet"             label   "Generated Channel Parameters"             grouptag { "sidefx::look" "blank" }              parm {                 name    "added_points_group"                 label   "Added Points Group"                 type    string                 default { "" }             }         }          parm {             name    "snippet"             baseparm             label   "VEXpression"             export  all         }         parm {             name    "exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }     }      group {         name    "folder1_1"         label   "Bindings"          parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }         parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }     }  ' $_obj_geo1_curve_intersector1_group_new_points
+opparm $_obj_geo1_curve_intersector1_group_new_points  bindings ( 0 ) groupbindings ( 0 )
+chblockbegin
+chadd -t 40 40 $_obj_geo1_curve_intersector1_group_new_points added_points_group
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../added_points_group")' $_obj_geo1_curve_intersector1_group_new_points/added_points_group
+chblockend
+opparm $_obj_geo1_curve_intersector1_group_new_points snippet ( 'string added_points_group = chs("added_points_group");\n\nif(@ptnum >= npoints(1))\n    setpointgroup(0, added_points_group, i@ptnum, 1);' ) added_points_group ( added_points_group )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_curve_intersector1_group_new_points
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_group_new_points
+opuserdata -n '___Version___' -v '' $_obj_geo1_curve_intersector1_group_new_points
+
+# Node $_obj_geo1_curve_intersector1_isolate_new_points (Sop/attribwrangle)
+set _obj_geo1_curve_intersector1_isolate_new_points = `run("opadd -e -n -v attribwrangle isolate_new_points")`
+oplocate -x `$arg2 + -6.5351053303633657` -y `$arg3 + -12.45748467106618` $_obj_geo1_curve_intersector1_isolate_new_points
+opspareds '    group {         name    "folder1"         label   "Code"          parm {             name    "group"             baseparm             label   "Group"             export  none             bindselector uvselect "Modify Attribs"                 "Select the geometry to affect and press Enter to complete."                 0 1 0xffffffff 0 grouptype 0         }         parm {             name    "grouptype"             baseparm             label   "Group Type"             export  none         }         parm {             name    "class"             baseparm             label   "Run Over"             export  none         }         parm {             name    "vex_numcount"             baseparm             label   "Number Count"             export  none         }         parm {             name    "vex_threadjobsize"             baseparm             label   "Thread Job Size"             export  none         }         groupsimple {             name    "folder_generatedparms_snippet"             label   "Generated Channel Parameters"             grouptag { "sidefx::look" "blank" }          }          parm {             name    "snippet"             baseparm             label   "VEXpression"             export  all         }         parm {             name    "exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }     }      group {         name    "folder1_1"         label   "Bindings"          parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }         parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }     }  ' $_obj_geo1_curve_intersector1_isolate_new_points
+opparm $_obj_geo1_curve_intersector1_isolate_new_points  bindings ( 0 ) groupbindings ( 0 )
+opparm $_obj_geo1_curve_intersector1_isolate_new_points snippet ( '\nif(@ptnum < npoints(1))\n    removepoint(0, i@ptnum);' )
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_curve_intersector1_isolate_new_points
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_isolate_new_points
+opuserdata -n '___Version___' -v '' $_obj_geo1_curve_intersector1_isolate_new_points
+
+# Node $_obj_geo1_curve_intersector1_null1 (Sop/null)
+set _obj_geo1_curve_intersector1_null1 = `run("opadd -e -n -v null null1")`
+oplocate -x `$arg2 + -15.384715330363365` -y `$arg3 + -7.7989546710661788` $_obj_geo1_curve_intersector1_null1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_curve_intersector1_null1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_null1
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_null1
+
+# Node $_obj_geo1_curve_intersector1_null2 (Sop/null)
+set _obj_geo1_curve_intersector1_null2 = `run("opadd -e -n -v null null2")`
+oplocate -x `$arg2 + -3.1973153303633657` -y `$arg3 + -7.2209846710661791` $_obj_geo1_curve_intersector1_null2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_curve_intersector1_null2
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_null2
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_null2
+
+# Node $_obj_geo1_curve_intersector1_output0 (Sop/output)
+set _obj_geo1_curve_intersector1_output0 = `run("opadd -e -n -v output output0")`
+oplocate -x `$arg2 + -8.9504253303633661` -y `$arg3 + -33.160984671066181` $_obj_geo1_curve_intersector1_output0
+chblockbegin
+chadd -t 40 40 $_obj_geo1_curve_intersector1_output0 outputidx
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'max(opdigits("."),0)' $_obj_geo1_curve_intersector1_output0/outputidx
+chblockend
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_curve_intersector1_output0
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_output0
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_output0
+
+# Node $_obj_geo1_curve_intersector1_switch1 (Sop/switch)
+set _obj_geo1_curve_intersector1_switch1 = `run("opadd -e -n -v switch switch1")`
+oplocate -x `$arg2 + -9.1794753303633652` -y `$arg3 + -30.851384671066178` $_obj_geo1_curve_intersector1_switch1
+chblockbegin
+chadd -t 40 40 $_obj_geo1_curve_intersector1_switch1 input
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../output_mode")' $_obj_geo1_curve_intersector1_switch1/input
+chblockend
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_curve_intersector1_switch1
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_switch1
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_switch1
+
+# Node $_obj_geo1_curve_intersector1_null3 (Sop/null)
+set _obj_geo1_curve_intersector1_null3 = `run("opadd -e -n -v null null3")`
+oplocate -x `$arg2 + 3.867864669636635` -y `$arg3 + -22.572374671066179` $_obj_geo1_curve_intersector1_null3
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_curve_intersector1_null3
+opexprlanguage -s hscript $_obj_geo1_curve_intersector1_null3
+opuserdata -n '___Version___' -v '20.5.370' $_obj_geo1_curve_intersector1_null3
+oporder -e isolate_current_point add_intersect_points refine2 foreach_end1 foreach_begin1 foreach_begin1_metadata1 group_new_points isolate_new_points null1 null2 output0 switch1 null3 
+opcf ..
+opset -p on $_obj_geo1_curve_intersector1
+
+opcf $arg1
+opwire -n $_obj_geo1_sort2 -0 $_obj_geo1_curve_intersector1
+opwire -n $_obj_geo1_copy1 -1 $_obj_geo1_curve_intersector1
+opcf $_obj_geo1_curve_intersector1
+opwire -n $_obj_geo1_curve_intersector1_isolate_new_points -0 $_obj_geo1_curve_intersector1_isolate_current_point
+opwire -n $_obj_geo1_curve_intersector1_foreach_begin1_metadata1 -1 $_obj_geo1_curve_intersector1_isolate_current_point
+opwire -n $_obj_geo1_curve_intersector1_foreach_begin1 -2 $_obj_geo1_curve_intersector1_isolate_current_point
+opcf $_obj_geo1_curve_intersector1_isolate_current_point
+opwire -n $_obj_geo1_curve_intersector1_isolate_current_point_compare1 -0 $_obj_geo1_curve_intersector1_isolate_current_point_switch1
+opwire -n $_obj_geo1_curve_intersector1_isolate_current_point_const2 -1 $_obj_geo1_curve_intersector1_isolate_current_point_switch1
+opwire -n -o 12 $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopglobal1 -2 $_obj_geo1_curve_intersector1_isolate_current_point_switch1
+opwire -n $_obj_geo1_curve_intersector1_isolate_current_point_switch1 -1 $_obj_geo1_curve_intersector1_isolate_current_point_removepoint1
+opwire -n -o 12 $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopglobal1 -0 $_obj_geo1_curve_intersector1_isolate_current_point_compare1
+opwire -n $_obj_geo1_curve_intersector1_isolate_current_point_getattrib1 -1 $_obj_geo1_curve_intersector1_isolate_current_point_compare1
+opwire -n -o 19 $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopglobal1 -0 $_obj_geo1_curve_intersector1_isolate_current_point_getattrib1
+opwire -n -o 20 $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopglobal1 -0 $_obj_geo1_curve_intersector1_isolate_current_point_xyzdist1
+opwire -n $_obj_geo1_curve_intersector1_isolate_current_point_snippet1 -1 $_obj_geo1_curve_intersector1_isolate_current_point_xyzdist1
+opwire -n $_obj_geo1_curve_intersector1_isolate_current_point_geometryvopglobal1 -2 $_obj_geo1_curve_intersector1_isolate_current_point_xyzdist1
+opwire -n $_obj_geo1_curve_intersector1_isolate_current_point_switch2 -0 $_obj_geo1_curve_intersector1_isolate_current_point_bind1
+opwire -n -o 2 $_obj_geo1_curve_intersector1_isolate_current_point_xyzdist1 -0 $_obj_geo1_curve_intersector1_isolate_current_point_vectofloat1
+opwire -n $_obj_geo1_curve_intersector1_isolate_current_point_complement1 -0 $_obj_geo1_curve_intersector1_isolate_current_point_switch2
+opwire -n $_obj_geo1_curve_intersector1_isolate_current_point_const1 -1 $_obj_geo1_curve_intersector1_isolate_current_point_switch2
+opwire -n $_obj_geo1_curve_intersector1_isolate_current_point_vectofloat1 -2 $_obj_geo1_curve_intersector1_isolate_current_point_switch2
+opwire -n $_obj_geo1_curve_intersector1_isolate_current_point_compare1 -0 $_obj_geo1_curve_intersector1_isolate_current_point_complement1
+opwire -n $_obj_geo1_curve_intersector1_isolate_current_point_const3 -0 $_obj_geo1_curve_intersector1_isolate_current_point_snippet1
+opwire -n $_obj_geo1_curve_intersector1_isolate_current_point_bind2 -1 $_obj_geo1_curve_intersector1_isolate_current_point_snippet1
+opcf ..
+opwire -n $_obj_geo1_curve_intersector1_null1 -0 $_obj_geo1_curve_intersector1_add_intersect_points
+opwire -n $_obj_geo1_curve_intersector1_null2 -1 $_obj_geo1_curve_intersector1_add_intersect_points
+opwire -n $_obj_geo1_curve_intersector1_foreach_begin1 -0 $_obj_geo1_curve_intersector1_refine2
+opwire -n $_obj_geo1_curve_intersector1_refine2 -0 $_obj_geo1_curve_intersector1_foreach_end1
+opwire -n $_obj_geo1_curve_intersector1_null1 -0 $_obj_geo1_curve_intersector1_foreach_begin1
+opwire -n $_obj_geo1_curve_intersector1_foreach_end1 -0 $_obj_geo1_curve_intersector1_group_new_points
+opwire -n $_obj_geo1_curve_intersector1_null1 -1 $_obj_geo1_curve_intersector1_group_new_points
+opwire -n $_obj_geo1_curve_intersector1_add_intersect_points -0 $_obj_geo1_curve_intersector1_isolate_new_points
+opwire -n $_obj_geo1_curve_intersector1_null1 -1 $_obj_geo1_curve_intersector1_isolate_new_points
+opwire -n -i 0 -0 $_obj_geo1_curve_intersector1_null1
+opwire -n -i 1 -0 $_obj_geo1_curve_intersector1_null2
+opwire -n $_obj_geo1_curve_intersector1_switch1 -0 $_obj_geo1_curve_intersector1_output0
+opwire -n $_obj_geo1_curve_intersector1_group_new_points -0 $_obj_geo1_curve_intersector1_switch1
+opwire -n $_obj_geo1_curve_intersector1_null3 -1 $_obj_geo1_curve_intersector1_switch1
+opwire -n $_obj_geo1_curve_intersector1_isolate_new_points -0 $_obj_geo1_curve_intersector1_null3
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_geo1_curve_intersector1
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_geo1_curve_intersector1
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

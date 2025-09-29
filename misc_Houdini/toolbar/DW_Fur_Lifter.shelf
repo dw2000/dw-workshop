@@ -1,0 +1,487 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="DW_Fur_Lifter" label="DW Fur Lifter" icon="SOP_hairclump">
+    <toolMenuContext name="network">
+      <contextOpType>Sop/null</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'attribvop' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_hairs (Sop/null)
+set _obj_squirrel_squirrel_body_hairgen_modify_hairs = `run("opadd -e -n -v null hairs")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_squirrel_squirrel_body_hairgen_modify_hairs
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_squirrel_squirrel_body_hairgen_modify_hairs
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_hairs
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_hairs
+opset -p on $_obj_squirrel_squirrel_body_hairgen_modify_hairs
+opcf $arg1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_skin_geo (Sop/null)
+set _obj_squirrel_squirrel_body_hairgen_modify_skin_geo = `run("opadd -e -n -v null skin_geo")`
+oplocate -x `$arg2 + 3.7263014201241091` -y `$arg3 + 0` $_obj_squirrel_squirrel_body_hairgen_modify_skin_geo
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_squirrel_squirrel_body_hairgen_modify_skin_geo
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_skin_geo
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_skin_geo
+opset -p on $_obj_squirrel_squirrel_body_hairgen_modify_skin_geo
+opcf $arg1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_attribpaint_lift_mask (Sop/attribpaint)
+set _obj_squirrel_squirrel_body_hairgen_modify_attribpaint_lift_mask = `run("opadd -e -n -v attribpaint attribpaint_lift_mask")`
+oplocate -x `$arg2 + 3.3032292216721171` -y `$arg3 + -1.6678713427236858` $_obj_squirrel_squirrel_body_hairgen_modify_attribpaint_lift_mask
+opparm $_obj_squirrel_squirrel_body_hairgen_modify_attribpaint_lift_mask  stroke_numstrokes ( 0 ) numattribs ( 1 )
+opparm $_obj_squirrel_squirrel_body_hairgen_modify_attribpaint_lift_mask stroke_attrib ( lift_mask ) lmboperation ( smooth ) stroke_operation ( smooth ) stroke_radius ( 0.27048138294215296 ) stroke_float ( 1 ) stroke_int ( 1 ) attribname1 ( lift_mask )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_squirrel_squirrel_body_hairgen_modify_attribpaint_lift_mask
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_attribpaint_lift_mask
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_attribpaint_lift_mask
+opuserdata -n '___toolcount___' -v '1' $_obj_squirrel_squirrel_body_hairgen_modify_attribpaint_lift_mask
+opuserdata -n '___toolid___' -v 'sop_attribpaint' $_obj_squirrel_squirrel_body_hairgen_modify_attribpaint_lift_mask
+opset -p on $_obj_squirrel_squirrel_body_hairgen_modify_attribpaint_lift_mask
+opcf $arg1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter (Sop/attribvop)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter = `run("opadd -e -n -v attribvop DW_Fur_Lifter")`
+oplocate -x `$arg2 + 2.311440000000001` -y `$arg3 + -3.6428999999999974` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"         grouptag { "sidefx::switcher" "stdswitcher" }          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vexsnippet"             baseparm             label   "Snippet"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }         parm {             name    "vex_exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }         parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }     }      parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "id"         label   "Id"         type    integer         invisible         default { "-1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "uv"         label   "UV"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "mask_attribute"         label   "Optional Mask Attribute"         type    string         default { "lift_mask" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "min_degrees"         label   "Min Degrees"         type    float         default { "5" }         range   { -90 90 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "max_degrees"         label   "Max Degrees"         type    float         default { "10" }         range   { -90 90 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "parm_seed"         label   "seed"         type    float         default { "105.88" }         range   { -10000 10000 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "prim_seed_attribute"         label   "Prim Seed Attribute"         type    string         default { "id" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     } ' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter
+opparm $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter  bindings ( 0 ) groupbindings ( 0 )
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter
+opcf $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + -13.523999999999999` -y `$arg3 + 6.1135400000000004` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 60.709000000000003` -y `$arg3 + -1.5132099999999999` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopoutput1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopoutput1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm1 (Vop/parameter)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm1 = `run("opadd -e -n -v parameter parm1")`
+oplocate -x `$arg2 + 9.67117` -y `$arg3 + -21.842400000000001` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm1
+opparm -V 20.0.590 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm1 parmname ( max_degrees ) parmlabel ( 'Max Degrees' ) floatdef ( 10 ) rangeflt ( -90 90 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm1
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad1 (Vop/degtorad)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad1 = `run("opadd -e -n -v degtorad degtorad1")`
+oplocate -x `$arg2 + 19.831299999999999` -y `$arg3 + -21.5137` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad1
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_xyzdist1 (Vop/xyzdist)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_xyzdist1 = `run("opadd -e -n -v xyzdist xyzdist1")`
+oplocate -x `$arg2 + 18.222000000000001` -y `$arg3 + 0.44570500000000002` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_xyzdist1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_xyzdist1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_xyzdist1
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_xyzdist1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_N (Vop/primuv)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_N = `run("opadd -e -n -v primuv skin_N")`
+oplocate -x `$arg2 + 21.963100000000001` -y `$arg3 + -1.02708` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_N
+opparm $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_N attrib ( N )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_N
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_N
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_N
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_root_P (Vop/primuv)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_root_P = `run("opadd -e -n -v primuv root_P")`
+oplocate -x `$arg2 + 13.6342` -y `$arg3 + 15.760400000000001` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_root_P
+opparm $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_root_P attrib ( P )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_root_P
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_root_P
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_root_P
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract1 (Vop/subtract)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract1 = `run("opadd -e -n -v subtract subtract1")`
+oplocate -x `$arg2 + 28.9602` -y `$arg3 + 13.843999999999999` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract1
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_qrotate1 (Vop/qrotate)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_qrotate1 = `run("opadd -e -n -v qrotate qrotate1")`
+oplocate -x `$arg2 + 43.979399999999998` -y `$arg3 + 1.68231` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_qrotate1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_qrotate1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_qrotate1
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_qrotate1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_quaternion1 (Vop/quaternion)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_quaternion1 = `run("opadd -e -n -v quaternion quaternion1")`
+oplocate -x `$arg2 + 39.5473` -y `$arg3 + -0.91457299999999997` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_quaternion1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_quaternion1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_quaternion1
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_quaternion1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add1 (Vop/add)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add1 = `run("opadd -e -n -v add add1")`
+oplocate -x `$arg2 + 48.974600000000002` -y `$arg3 + 2.649` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add1
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_const1 (Vop/constant)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_const1 = `run("opadd -e -n -v constant const1")`
+oplocate -x `$arg2 + 14.0655` -y `$arg3 + -12.272600000000001` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_const1
+opparm -V 20.0.590 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_const1 floatdef ( -63.2 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_const1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_const1
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_const1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_random1 (Vop/random)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_random1 = `run("opadd -e -n -v random random1")`
+oplocate -x `$arg2 + 21.065999999999999` -y `$arg3 + -13.939399999999999` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_random1
+opparm $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_random1 roundtoint ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_random1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_random1
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_random1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add2 (Vop/add)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add2 = `run("opadd -e -n -v add add2")`
+oplocate -x `$arg2 + 17.633299999999998` -y `$arg3 + -13.939399999999999` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add2
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add2
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add2
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_input3 (Vop/parameter)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_input3 = `run("opadd -e -n -v parameter input3")`
+oplocate -x `$arg2 + 12.774900000000001` -y `$arg3 + -13.939399999999999` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_input3
+opparm -V 20.0.590 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_input3 parmname ( parm_seed ) parmlabel ( seed ) floatdef ( 105.88 ) rangeflt ( -10000 10000 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_input3
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_input3
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_input3
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_getattrib1 (Vop/getattrib::2.0)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_getattrib1 = `run("opadd -e -n -v getattrib::2.0 getattrib1")`
+oplocate -x `$arg2 + 8.9914199999999997` -y `$arg3 + -4.5949799999999996` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_getattrib1
+chblockbegin
+chadd -t 40 40 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_getattrib1 attrib
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs(\'../attrib/stringdef\')' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_getattrib1/attrib
+chblockend
+opparm $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_getattrib1 signature ( i ) atype ( prim ) attrib ( attrib )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_getattrib1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_getattrib1
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_getattrib1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_fit1 (Vop/fit)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_fit1 = `run("opadd -e -n -v fit fit1")`
+oplocate -x `$arg2 + 26.514299999999999` -y `$arg3 + -12.9526` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_fit1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_fit1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_fit1
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_fit1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib (Vop/parameter)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib = `run("opadd -e -n -v parameter attrib")`
+oplocate -x `$arg2 + 5.1545100000000001` -y `$arg3 + -5.1949800000000002` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib
+opparm -V 20.0.590 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib parmname ( prim_seed_attribute ) parmlabel ( 'Prim Seed Attribute' ) parmtype ( string ) stringdef ( id ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm2 (Vop/parameter)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm2 = `run("opadd -e -n -v parameter parm2")`
+oplocate -x `$arg2 + 8.8424999999999994` -y `$arg3 + -16.136500000000002` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm2
+opparm -V 20.0.590 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm2 parmname ( min_degrees ) parmlabel ( 'Min Degrees' ) floatdef ( 5 ) rangeflt ( -90 90 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm2
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm2
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm2
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad2 (Vop/degtorad)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad2 = `run("opadd -e -n -v degtorad degtorad2")`
+oplocate -x `$arg2 + 19.831299999999999` -y `$arg3 + -16.637899999999998` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad2
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad2
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad2
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_tip_P (Vop/primuv)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_tip_P = `run("opadd -e -n -v primuv tip_P")`
+oplocate -x `$arg2 + 17.138300000000001` -y `$arg3 + -4.0918999999999999` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_tip_P
+opparm $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_tip_P attrib ( P ) u ( 1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_tip_P
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_tip_P
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_tip_P
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract2 (Vop/subtract)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract2 = `run("opadd -e -n -v subtract subtract2")`
+oplocate -x `$arg2 + 22.595199999999998` -y `$arg3 + -5.0310600000000001` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract2
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract2
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract2
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_cross1 (Vop/cross)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_cross1 = `run("opadd -e -n -v cross cross1")`
+oplocate -x `$arg2 + 25.7425` -y `$arg3 + -2.85189` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_cross1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_cross1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_cross1
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_cross1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_normalize1 (Vop/normalize)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_normalize1 = `run("opadd -e -n -v normalize normalize1")`
+oplocate -x `$arg2 + 31.142199999999999` -y `$arg3 + -2.3342000000000001` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_normalize1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_normalize1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_normalize1
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_normalize1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask (Vop/primuv)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask = `run("opadd -e -n -v primuv skin_lift_mask")`
+oplocate -x `$arg2 + 25.630299999999998` -y `$arg3 + 3.1847799999999999` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask
+chblockbegin
+chadd -t 40 40 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask attrib
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs(\'../attrib1/stringdef\')' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask/attrib
+chblockend
+opparm $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask signature ( f ) attrib ( attrib )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_multiply1 (Vop/multiply)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_multiply1 = `run("opadd -e -n -v multiply multiply1")`
+oplocate -x `$arg2 + 30.4466` -y `$arg3 + -7.7555899999999998` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_multiply1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_multiply1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_multiply1
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_multiply1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_max1 (Vop/max)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_max1 = `run("opadd -e -n -v max max1")`
+oplocate -x `$arg2 + 14.4297` -y `$arg3 + -20.862400000000001` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_max1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_max1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_max1
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_max1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_addconst1 (Vop/addconst)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_addconst1 = `run("opadd -e -n -v addconst addconst1")`
+oplocate -x `$arg2 + 11.666700000000001` -y `$arg3 + -18.610399999999998` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_addconst1
+opparm $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_addconst1 signature ( f ) addconst ( 1e-5 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_addconst1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_addconst1
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_addconst1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib1 (Vop/parameter)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib1 = `run("opadd -e -n -v parameter attrib1")`
+oplocate -x `$arg2 + 20.682700000000001` -y `$arg3 + 6.5199800000000003` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib1
+opparm -V 20.0.590 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib1 parmname ( mask_attribute ) parmlabel ( 'Optional Mask Attribute' ) parmtype ( string ) stringdef ( lift_mask ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib1
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib1
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_test_mask_attribute (Vop/getattrib::2.0)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_test_mask_attribute = `run("opadd -e -n -v getattrib::2.0 test_mask_attribute")`
+oplocate -x `$arg2 + 24.987100000000002` -y `$arg3 + 7.8255100000000004` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_test_mask_attribute
+opparm $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_test_mask_attribute signature ( f ) attrib ( "" )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_test_mask_attribute
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_test_mask_attribute
+opuserdata -n '___Version___' -v '' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_test_mask_attribute
+
+# Node $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_switch1 (Vop/switch)
+set _obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_switch1 = `run("opadd -e -n -v switch switch1")`
+oplocate -x `$arg2 + 35.276699999999998` -y `$arg3 + -5.3033799999999998` $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_switch1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_switch1
+opexprlanguage -s hscript $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_switch1
+opuserdata -n '___Version___' -v '20.0.590' $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_switch1
+opcf ..
+opcf $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter
+oporder -e geometryvopglobal1 geometryvopoutput1 parm1 degtorad1 xyzdist1 skin_N root_P subtract1 qrotate1 quaternion1 add1 const1 random1 add2 input3 getattrib1 fit1 attrib parm2 degtorad2 tip_P subtract2 cross1 normalize1 skin_lift_mask multiply1 max1 addconst1 attrib1 test_mask_attribute switch1 
+opcf ..
+opset -p on $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter
+
+opcf $arg1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_cullPercentage -0 $_obj_squirrel_squirrel_body_hairgen_modify_hairs
+opcf $arg1
+opwire -n -i 1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_skin_geo
+opcf $arg1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_skin_geo -0 $_obj_squirrel_squirrel_body_hairgen_modify_attribpaint_lift_mask
+opcf $arg1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_hairs -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_attribpaint_lift_mask -1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter
+opcf $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopoutput1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_max1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad1
+opwire -n -o 19 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_xyzdist1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_root_P -2 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_xyzdist1
+opwire -n -o 19 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_N
+opwire -n -o 1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_xyzdist1 -2 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_N
+opwire -n -o 2 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_xyzdist1 -3 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_N
+opwire -n -o 18 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_root_P
+opwire -n -o 13 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1 -2 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_root_P
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_root_P -1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_quaternion1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_qrotate1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract1 -1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_qrotate1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_switch1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_quaternion1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_normalize1 -1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_quaternion1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_qrotate1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_root_P -1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add2 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_random1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_const1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add2
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_input3 -1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add2
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_getattrib1 -2 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_add2
+opwire -n -o 18 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_getattrib1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib -2 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_getattrib1
+opwire -n -o 13 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1 -3 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_getattrib1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_random1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_fit1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad2 -3 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_fit1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad1 -4 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_fit1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm2 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_degtorad2
+opwire -n -o 18 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_tip_P
+opwire -n -o 13 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1 -2 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_tip_P
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_tip_P -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract2
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_root_P -1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract2
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_subtract2 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_cross1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_N -1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_cross1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_cross1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_normalize1
+opwire -n -o 19 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib1 -1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask
+opwire -n -o 1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_xyzdist1 -2 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask
+opwire -n -o 2 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_xyzdist1 -3 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_fit1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_multiply1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_skin_lift_mask -1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_multiply1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_addconst1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_max1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm1 -1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_max1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_parm2 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_addconst1
+opwire -n -o 19 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_geometryvopglobal1 -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_test_mask_attribute
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_attrib1 -2 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_test_mask_attribute
+opwire -n -o 1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_test_mask_attribute -0 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_switch1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_fit1 -1 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_switch1
+opwire -n $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_multiply1 -2 $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter_switch1
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_squirrel_squirrel_body_hairgen_modify_DW_Fur_Lifter
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_squirrel_squirrel_body_hairgen_modify_hairs
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

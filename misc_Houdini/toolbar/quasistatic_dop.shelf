@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="quasistatic_dop" label="Quasistatic Dop" icon="NETWORKS_dop">
+    <toolMenuContext name="network">
+      <contextOpType>Sop/sphere</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'subnet' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_image_thing_sphere1 (Sop/sphere)
+set _obj_image_thing_sphere1 = `run("opadd -e -n -v sphere sphere1")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_image_thing_sphere1
+opparm -V 19.5.435 $_obj_image_thing_sphere1 type ( polymesh ) rad ( 0.5 0.5 0.5 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_sphere1
+opexprlanguage -s hscript $_obj_image_thing_sphere1
+opuserdata -n '___Version___' -v '19.5.435' $_obj_image_thing_sphere1
+opset -p on $_obj_image_thing_sphere1
+opcf $arg1
+
+# Node $_obj_image_thing_scatter1 (Sop/scatter::2.0)
+set _obj_image_thing_scatter1 = `run("opadd -e -n -v scatter::2.0 scatter1")`
+oplocate -x `$arg2 + 0.21109999999998763` -y `$arg3 + -1` $_obj_image_thing_scatter1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_scatter1
+opexprlanguage -s hscript $_obj_image_thing_scatter1
+opuserdata -n '___Version___' -v '19.5.435' $_obj_image_thing_scatter1
+opset -p on $_obj_image_thing_scatter1
+opcf $arg1
+
+# Node $_obj_image_thing_init_v (Sop/attribwrangle)
+set _obj_image_thing_init_v = `run("opadd -e -n -v attribwrangle init_v")`
+oplocate -x `$arg2 + 0.44710000000000605` -y `$arg3 + -2.0389999999999873` $_obj_image_thing_init_v
+opspareds '    group {         name    "folder1"         label   "Code"          parm {             name    "group"             baseparm             label   "Group"             export  none             bindselector points "Modify Points"                 "Select the points to affect and press Enter to complete."                 0 1 0xffffffff 0 grouptype 0         }         parm {             name    "grouptype"             baseparm             label   "Group Type"             export  none         }         parm {             name    "class"             baseparm             label   "Run Over"             export  none         }         parm {             name    "vex_numcount"             baseparm             label   "Number Count"             export  none         }         parm {             name    "vex_threadjobsize"             baseparm             label   "Thread Job Size"             export  none         }         parm {             name    "snippet"             baseparm             label   "VEXpression"             export  all         }         parm {             name    "exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }     }      group {         name    "folder1_1"         label   "Bindings"          parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }         parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }     }      parm {         name    "speed"         label   "Speed"         type    float         default { "0" }         range   { 0 1 }     } ' $_obj_image_thing_init_v
+opparm $_obj_image_thing_init_v  bindings ( 0 ) groupbindings ( 0 )
+chblockbegin
+chadd -t 41.666666666666664 41.666666666666664 $_obj_image_thing_init_v speed
+chkey -t 41.666666666666664 -v 2 -m 0 -a 0 -A 0 -T a  -F '2*sin($FF/2)' $_obj_image_thing_init_v/speed
+chblockend
+opparm $_obj_image_thing_init_v snippet ( 'v@v = normalize(@P) * chf("speed"); ' ) speed ( speed )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_init_v
+opexprlanguage -s hscript $_obj_image_thing_init_v
+opuserdata -n '___Version___' -v '' $_obj_image_thing_init_v
+opset -p on $_obj_image_thing_init_v
+opcf $arg1
+
+# Node $_obj_image_thing_quasistatic_dop (Sop/subnet)
+set _obj_image_thing_quasistatic_dop = `run("opadd -e -n -v subnet quasistatic_dop")`
+oplocate -x `$arg2 + 0.76410484715607652` -y `$arg3 + -4.0221129041505037` $_obj_image_thing_quasistatic_dop
+opspareds '    parm {         name    "resimulate"         label   "Reset Simulation"         type    button         default { "0" }         parmtag { "autoscope" "0000000000000000" }     }     parm {         name    "startframe"         label   "Start Frame"         type    integer         default { "1" }         range   { 1 240 }         parmtag { "autoscope" "0000000000000000" }     }     group {         name    "folder0_1_2"         label   "Simulation"          parm {             name    "cacheenabled"             label   "Cache Enabled"             type    toggle             nolabel             joinnext             default { "1" }         }         parm {             name    "cachemaxsize"             label   "Cache Memory (MB)"             type    integer             default { "5000" }             disablewhen "{ cacheenabled == 0 }"             range   { 0! 1000 }             parmtag { "autoscope" "0000000000000000" }         }         parm {             name    "autoresim"             label   "Enable Automatic Resimulation"             type    toggle             default { "on" }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "simulationtype"             label   "Simulation Type"             type    ordinal             default { "dynamic" }             menu {                 "quasistatic"   "Quasistatic"                 "dynamic"       "Dynamic"             }         }         parm {             name    "quasistaticframes"             label   "Quasistatic Frames"             type    integer             default { "10" }             disablewhen "{ simulationtype == dynamic }"             range   { 0! 100 }         }     }      parm {         name    "label1"         baseparm         label   "Input #1 Label"         invisible         export  all     }     parm {         name    "label2"         baseparm         label   "Input #2 Label"         invisible         export  all     }     parm {         name    "label3"         baseparm         label   "Input #3 Label"         invisible         export  all     }     parm {         name    "label4"         baseparm         label   "Input #4 Label"         invisible         export  all     } ' $_obj_image_thing_quasistatic_dop
+opparm -V 19.5.435 $_obj_image_thing_quasistatic_dop startframe ( 1001 ) simulationtype ( quasistatic ) quasistaticframes ( 37 )
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_quasistatic_dop
+opexprlanguage -s hscript $_obj_image_thing_quasistatic_dop
+opuserdata -n '___Version___' -v '19.5.435' $_obj_image_thing_quasistatic_dop
+opcf $_obj_image_thing_quasistatic_dop
+
+# Node $_obj_image_thing_quasistatic_dop_dopnet1 (Sop/dopnet)
+set _obj_image_thing_quasistatic_dop_dopnet1 = `run("opadd -e -n -v dopnet dopnet1")`
+oplocate -x `$arg2 + -6.6067099999999996` -y `$arg3 + 7.6916799999999999` $_obj_image_thing_quasistatic_dop_dopnet1
+opparm $_obj_image_thing_quasistatic_dop_dopnet1  numobj ( 1 )
+chblockbegin
+chadd -t 41.666666666666664 41.666666666666664 $_obj_image_thing_quasistatic_dop_dopnet1 resimulate
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../resimulate")' $_obj_image_thing_quasistatic_dop_dopnet1/resimulate
+chadd -t 41.666666666666664 41.666666666666664 $_obj_image_thing_quasistatic_dop_dopnet1 timestep
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("timescale")/(ch("substep")*$FPS)' $_obj_image_thing_quasistatic_dop_dopnet1/timestep
+chadd -t 41.666666666666664 41.666666666666664 $_obj_image_thing_quasistatic_dop_dopnet1 timeoffset
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'if (ch("../simulationtype"), (ch("startframe")-1)/$FPS, stamp("../copy1", "QUASISTATICTIME", 0))' $_obj_image_thing_quasistatic_dop_dopnet1/timeoffset
+chadd -t 41.666666666666664 41.666666666666664 $_obj_image_thing_quasistatic_dop_dopnet1 startframe
+chkey -t 41.666666666666664 -v 1001 -m 0 -a 0 -A 0 -T a  -F 'ch("../startframe")' $_obj_image_thing_quasistatic_dop_dopnet1/startframe
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_dopnet1 autoresim
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../autoresim")' $_obj_image_thing_quasistatic_dop_dopnet1/autoresim
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_dopnet1 cacheenabled
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../simulationtype") && ch("../cacheenabled")' $_obj_image_thing_quasistatic_dop_dopnet1/cacheenabled
+chblockend
+opparm -V 19.5.435 $_obj_image_thing_quasistatic_dop_dopnet1 stdswitcher ( 1 1 1 ) resimulate ( resimulate ) timeoffset ( timeoffset ) startframe ( startframe ) autoresim ( autoresim ) cacheenabled ( cacheenabled ) objname1 ( * )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_quasistatic_dop_dopnet1
+opexprlanguage -s hscript $_obj_image_thing_quasistatic_dop_dopnet1
+opuserdata -n '___Version___' -v '19.5.435' $_obj_image_thing_quasistatic_dop_dopnet1
+opcf $_obj_image_thing_quasistatic_dop_dopnet1
+
+# Node $_obj_image_thing_quasistatic_dop_dopnet1_popsolver (Dop/popsolver::2.0)
+set _obj_image_thing_quasistatic_dop_dopnet1_popsolver = `run("opadd -e -n -v popsolver::2.0 popsolver")`
+oplocate -x `$arg2 + -1.3218700000000001` -y `$arg3 + -1.1972100000000001` $_obj_image_thing_quasistatic_dop_dopnet1_popsolver
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_quasistatic_dop_dopnet1_popsolver
+opexprlanguage -s hscript $_obj_image_thing_quasistatic_dop_dopnet1_popsolver
+opuserdata -n '___Version___' -v '' $_obj_image_thing_quasistatic_dop_dopnet1_popsolver
+opuserdata -n '___toolcount___' -v '1' $_obj_image_thing_quasistatic_dop_dopnet1_popsolver
+opuserdata -n '___toolid___' -v 'dynamics_poplocation' $_obj_image_thing_quasistatic_dop_dopnet1_popsolver
+
+# Node $_obj_image_thing_quasistatic_dop_dopnet1_source_first_input (Dop/popsource::2.0)
+set _obj_image_thing_quasistatic_dop_dopnet1_source_first_input = `run("opadd -e -n -v popsource::2.0 source_first_input")`
+oplocate -x `$arg2 + -0.192275` -y `$arg3 + 0.91118500000000002` $_obj_image_thing_quasistatic_dop_dopnet1_source_first_input
+opparm $_obj_image_thing_quasistatic_dop_dopnet1_source_first_input folder0 ( 1 1 1 1 1 ) emittype ( allpoint ) usecontextgeo ( first ) seed ( 3.73 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_quasistatic_dop_dopnet1_source_first_input
+opexprlanguage -s hscript $_obj_image_thing_quasistatic_dop_dopnet1_source_first_input
+opuserdata -n '___Version___' -v '' $_obj_image_thing_quasistatic_dop_dopnet1_source_first_input
+opuserdata -n '___toolcount___' -v '2' $_obj_image_thing_quasistatic_dop_dopnet1_source_first_input
+opuserdata -n '___toolid___' -v 'dynamics_popsource' $_obj_image_thing_quasistatic_dop_dopnet1_source_first_input
+opcf ..
+opcf ..
+opcf $_obj_image_thing_quasistatic_dop
+
+# Node $_obj_image_thing_quasistatic_dop_output0 (Sop/output)
+set _obj_image_thing_quasistatic_dop_output0 = `run("opadd -e -n -v output output0")`
+oplocate -x `$arg2 + -1.8906400000000001` -y `$arg3 + -5.3159999999999998` $_obj_image_thing_quasistatic_dop_output0
+opparm -V 19.5.435 $_obj_image_thing_quasistatic_dop_output0 outputidx ( 0 )
+chlock $_obj_image_thing_quasistatic_dop_output0 +outputidx
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_quasistatic_dop_output0
+opexprlanguage -s hscript $_obj_image_thing_quasistatic_dop_output0
+opuserdata -n '___Version___' -v '19.5.435' $_obj_image_thing_quasistatic_dop_output0
+
+# Node $_obj_image_thing_quasistatic_dop_dopimport_geometry (Sop/dopimportfield)
+set _obj_image_thing_quasistatic_dop_dopimport_geometry = `run("opadd -e -n -v dopimportfield dopimport_geometry")`
+oplocate -x `$arg2 + -1.64577` -y `$arg3 + 4.8213600000000003` $_obj_image_thing_quasistatic_dop_dopimport_geometry
+opparm $_obj_image_thing_quasistatic_dop_dopimport_geometry  fields ( 1 ) attribute_numcasts ( 0 ) compression ( 0 )
+opparm -V 1 $_obj_image_thing_quasistatic_dop_dopimport_geometry doppath ( ../dopnet1 ) dopnode ( ../dopnet1/popobject ) fields ( 1 ) visible1 ( nochange ) fieldname1 ( Geometry )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_quasistatic_dop_dopimport_geometry
+opexprlanguage -s hscript $_obj_image_thing_quasistatic_dop_dopimport_geometry
+opuserdata -n '___Version___' -v '1' $_obj_image_thing_quasistatic_dop_dopimport_geometry
+
+# Node $_obj_image_thing_quasistatic_dop_reset_frame (Sop/timeshift)
+set _obj_image_thing_quasistatic_dop_reset_frame = `run("opadd -e -n -v timeshift reset_frame")`
+oplocate -x `$arg2 + -5.6138500000000002` -y `$arg3 + 4.04033` $_obj_image_thing_quasistatic_dop_reset_frame
+chblockbegin
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_reset_frame frame
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$F' $_obj_image_thing_quasistatic_dop_reset_frame/frame
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_reset_frame time
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$T' $_obj_image_thing_quasistatic_dop_reset_frame/time
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_reset_frame frange1
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FSTART' $_obj_image_thing_quasistatic_dop_reset_frame/frange1
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_reset_frame frange2
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FEND' $_obj_image_thing_quasistatic_dop_reset_frame/frange2
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_reset_frame trange1
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$TSTART' $_obj_image_thing_quasistatic_dop_reset_frame/trange1
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_reset_frame trange2
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$TEND' $_obj_image_thing_quasistatic_dop_reset_frame/trange2
+chblockend
+opparm -V 19.5.435 $_obj_image_thing_quasistatic_dop_reset_frame method ( bytime )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_quasistatic_dop_reset_frame
+opexprlanguage -s hscript $_obj_image_thing_quasistatic_dop_reset_frame
+opuserdata -n '___Version___' -v '19.5.435' $_obj_image_thing_quasistatic_dop_reset_frame
+
+# Node $_obj_image_thing_quasistatic_dop_copy1 (Sop/copy)
+set _obj_image_thing_quasistatic_dop_copy1 = `run("opadd -e -n -v copy copy1")`
+oplocate -x `$arg2 + -2.6559300000000001` -y `$arg3 + -2.1064600000000002` $_obj_image_thing_quasistatic_dop_copy1
+chblockbegin
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_copy1 val1
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$T' $_obj_image_thing_quasistatic_dop_copy1/val1
+chblockend
+opparm -V 19.5.435 $_obj_image_thing_quasistatic_dop_copy1 stdswitcher ( 1 1 1 ) stamp ( on ) param1 ( QUASISTATICTIME ) val1 ( val1 )
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_quasistatic_dop_copy1
+opexprlanguage -s hscript $_obj_image_thing_quasistatic_dop_copy1
+opuserdata -n '___Version___' -v '19.5.435' $_obj_image_thing_quasistatic_dop_copy1
+
+# Node $_obj_image_thing_quasistatic_dop_solve_time (Sop/timeshift)
+set _obj_image_thing_quasistatic_dop_solve_time = `run("opadd -e -n -v timeshift solve_time")`
+oplocate -x `$arg2 + -2.3330600000000001` -y `$arg3 + 2.9492400000000001` $_obj_image_thing_quasistatic_dop_solve_time
+chblockbegin
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_solve_time frame
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$F+ch("../quasistaticframes")' $_obj_image_thing_quasistatic_dop_solve_time/frame
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_solve_time time
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$T' $_obj_image_thing_quasistatic_dop_solve_time/time
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_solve_time frange1
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FSTART' $_obj_image_thing_quasistatic_dop_solve_time/frange1
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_solve_time frange2
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FEND' $_obj_image_thing_quasistatic_dop_solve_time/frange2
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_solve_time trange1
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$TSTART' $_obj_image_thing_quasistatic_dop_solve_time/trange1
+chadd -t 0 0 $_obj_image_thing_quasistatic_dop_solve_time trange2
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$TEND' $_obj_image_thing_quasistatic_dop_solve_time/trange2
+chblockend
+opparm -V 19.5.435 $_obj_image_thing_quasistatic_dop_solve_time frame ( frame )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_quasistatic_dop_solve_time
+opexprlanguage -s hscript $_obj_image_thing_quasistatic_dop_solve_time
+opuserdata -n '___Version___' -v '19.5.435' $_obj_image_thing_quasistatic_dop_solve_time
+
+# Node $_obj_image_thing_quasistatic_dop_null4 (Sop/null)
+set _obj_image_thing_quasistatic_dop_null4 = `run("opadd -e -n -v null null4")`
+oplocate -x `$arg2 + -5.0594099999999997` -y `$arg3 + 2.2418399999999998` $_obj_image_thing_quasistatic_dop_null4
+opparm -V 19.5.435 $_obj_image_thing_quasistatic_dop_null4 copyinput ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_quasistatic_dop_null4
+opexprlanguage -s hscript $_obj_image_thing_quasistatic_dop_null4
+opuserdata -n '___Version___' -v '19.5.435' $_obj_image_thing_quasistatic_dop_null4
+
+# Node $_obj_image_thing_quasistatic_dop_merge4 (Sop/merge)
+set _obj_image_thing_quasistatic_dop_merge4 = `run("opadd -e -n -v merge merge4")`
+oplocate -x `$arg2 + -3.1322700000000001` -y `$arg3 + 0.23393` $_obj_image_thing_quasistatic_dop_merge4
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_quasistatic_dop_merge4
+opexprlanguage -s hscript $_obj_image_thing_quasistatic_dop_merge4
+opuserdata -n '___Version___' -v '19.5.435' $_obj_image_thing_quasistatic_dop_merge4
+opcf $_obj_image_thing_quasistatic_dop_dopnet1
+
+# Node $_obj_image_thing_quasistatic_dop_dopnet1_output (Dop/output)
+set _obj_image_thing_quasistatic_dop_dopnet1_output = `run("opadd -e -n -v output output")`
+oplocate -x `$arg2 + -1.3218700000000001` -y `$arg3 + -2.3267099999999998` $_obj_image_thing_quasistatic_dop_dopnet1_output
+chblockbegin
+chadd -t 41.666666666666664 41.666666666666664 $_obj_image_thing_quasistatic_dop_dopnet1_output f1
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FSTART' $_obj_image_thing_quasistatic_dop_dopnet1_output/f1
+chadd -t 41.666666666666664 41.666666666666664 $_obj_image_thing_quasistatic_dop_dopnet1_output f2
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FEND' $_obj_image_thing_quasistatic_dop_dopnet1_output/f2
+chblockend
+opset -d on -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_quasistatic_dop_dopnet1_output
+opexprlanguage -s hscript $_obj_image_thing_quasistatic_dop_dopnet1_output
+opuserdata -n '___Version___' -v '' $_obj_image_thing_quasistatic_dop_dopnet1_output
+
+# Node $_obj_image_thing_quasistatic_dop_dopnet1_popobject (Dop/popobject)
+set _obj_image_thing_quasistatic_dop_dopnet1_popobject = `run("opadd -e -n -v popobject popobject")`
+oplocate -x `$arg2 + -2.6397200000000001` -y `$arg3 + 0.60995500000000002` $_obj_image_thing_quasistatic_dop_dopnet1_popobject
+opparm $_obj_image_thing_quasistatic_dop_dopnet1_popobject usesimframe ( on ) createframe ( 1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_image_thing_quasistatic_dop_dopnet1_popobject
+opexprlanguage -s hscript $_obj_image_thing_quasistatic_dop_dopnet1_popobject
+opuserdata -n '___Version___' -v '' $_obj_image_thing_quasistatic_dop_dopnet1_popobject
+opuserdata -n '___toolcount___' -v '2' $_obj_image_thing_quasistatic_dop_dopnet1_popobject
+opuserdata -n '___toolid___' -v 'dynamics_poplocation' $_obj_image_thing_quasistatic_dop_dopnet1_popobject
+oporder -e popsolver source_first_input output popobject 
+opcf ..
+oporder -e output0 dopimport_geometry reset_frame copy1 solve_time null4 merge4 dopnet1 
+opcf ..
+opset -p on $_obj_image_thing_quasistatic_dop
+
+opcf $arg1
+opcf $arg1
+opwire -n $_obj_image_thing_sphere1 -0 $_obj_image_thing_scatter1
+opcf $arg1
+opwire -n $_obj_image_thing_scatter1 -0 $_obj_image_thing_init_v
+opcf $arg1
+opwire -n $_obj_image_thing_init_v -0 $_obj_image_thing_quasistatic_dop
+opcf $_obj_image_thing_quasistatic_dop
+opwire -n $_obj_image_thing_quasistatic_dop_copy1 -0 $_obj_image_thing_quasistatic_dop_output0
+opwire -n $_obj_image_thing_quasistatic_dop_dopnet1 -0 $_obj_image_thing_quasistatic_dop_reset_frame
+opwire -n $_obj_image_thing_quasistatic_dop_merge4 -0 $_obj_image_thing_quasistatic_dop_copy1
+opwire -n $_obj_image_thing_quasistatic_dop_dopimport_geometry -0 $_obj_image_thing_quasistatic_dop_solve_time
+opwire -n $_obj_image_thing_quasistatic_dop_reset_frame -0 $_obj_image_thing_quasistatic_dop_null4
+opwire -n $_obj_image_thing_quasistatic_dop_null4 -0 $_obj_image_thing_quasistatic_dop_merge4
+opwire -n $_obj_image_thing_quasistatic_dop_solve_time -1 $_obj_image_thing_quasistatic_dop_merge4
+opwire -n -i 0 -0 $_obj_image_thing_quasistatic_dop_dopnet1
+opcf $_obj_image_thing_quasistatic_dop_dopnet1
+opwire -n $_obj_image_thing_quasistatic_dop_dopnet1_popobject -0 $_obj_image_thing_quasistatic_dop_dopnet1_popsolver
+opwire -n $_obj_image_thing_quasistatic_dop_dopnet1_source_first_input -2 $_obj_image_thing_quasistatic_dop_dopnet1_popsolver
+opwire -n $_obj_image_thing_quasistatic_dop_dopnet1_popsolver -0 $_obj_image_thing_quasistatic_dop_dopnet1_output
+opcf ..
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_image_thing_quasistatic_dop
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_image_thing_sphere1
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

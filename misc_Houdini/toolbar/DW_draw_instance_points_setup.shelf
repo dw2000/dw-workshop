@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="DW_draw_instance_points" label="DW Draw Instance Points" icon="SOP_drawcurve">
+    <toolMenuContext name="network">
+      <contextOpType>Sop/platonic</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'grid' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_swarm_0047_0050_platonic1 (Sop/platonic)
+set _obj_swarm_0047_0050_platonic1 = `run("opadd -e -n -v platonic platonic1")`
+oplocate -x `$arg2 + -2.1044346998961032` -y `$arg3 + -5.0282472708205272` $_obj_swarm_0047_0050_platonic1
+opparm $_obj_swarm_0047_0050_platonic1 type ( 6 ) t ( 0 0.5 0 ) r ( 0 -90 0 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_swarm_0047_0050_platonic1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_platonic1
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_platonic1
+opuserdata -n '___toolcount___' -v '1' $_obj_swarm_0047_0050_platonic1
+opuserdata -n '___toolid___' -v 'sop_platonic' $_obj_swarm_0047_0050_platonic1
+opset -p on $_obj_swarm_0047_0050_platonic1
+opcf $arg1
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point (Sop/attribvop)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point = `run("opadd -e -n -v attribvop set_N_and_up_and_collapse_to_point")`
+oplocate -x `$arg2 + 1.1337965658268594` -y `$arg3 + -5.3478719826145493` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vexsnippet"             baseparm             label   "Snippet"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }         parm {             name    "vex_exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }         parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }     }      parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "id"         label   "Id"         type    integer         invisible         default { "-1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "uv"         label   "UV"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     } ' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point
+opparm $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point  bindings ( 0 ) groupbindings ( 0 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point
+opcf $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + 1.9057900000000001` -y `$arg3 + 1.97631` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 20.275500000000001` -y `$arg3 + -2.1664500000000002` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopoutput1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopoutput1
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_xyzdist1 (Vop/xyzdist)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_xyzdist1 = `run("opadd -e -n -v xyzdist xyzdist1")`
+oplocate -x `$arg2 + 7.8281700000000001` -y `$arg3 + 1.4467699999999999` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_xyzdist1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_xyzdist1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_xyzdist1
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_xyzdist1
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv1 (Vop/primuv)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv1 = `run("opadd -e -n -v primuv primuv1")`
+oplocate -x `$arg2 + 11.408300000000001` -y `$arg3 + 1.4467699999999999` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv1
+opparm $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv1 attrib ( N )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv1
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv1
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_bind1 (Vop/bind)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_bind1 = `run("opadd -e -n -v bind bind1")`
+oplocate -x `$arg2 + 14.0494` -y `$arg3 + 1.4467699999999999` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_bind1
+opparm -V 19.5.368 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_bind1 parmname ( up ) parmtype ( float3 ) overridetype ( on ) useasparmdefiner ( on ) exportparm ( whenconnected ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_bind1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_bind1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_bind1
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_subtract1 (Vop/subtract)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_subtract1 = `run("opadd -e -n -v subtract subtract1")`
+oplocate -x `$arg2 + 13.2591` -y `$arg3 + -2.3164500000000001` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_subtract1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_subtract1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_subtract1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_subtract1
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_normalize1 (Vop/normalize)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_normalize1 = `run("opadd -e -n -v normalize normalize1")`
+oplocate -x `$arg2 + 15.430199999999999` -y `$arg3 + -2.0164499999999999` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_normalize1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_normalize1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_normalize1
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_normalize1
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_calc_prim_u (Vop/snippet)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_calc_prim_u = `run("opadd -e -n -v snippet calc_prim_u")`
+oplocate -x `$arg2 + 9.4986999999999995` -y `$arg3 + 4.8244199999999999` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_calc_prim_u
+opparm $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_calc_prim_u  namenum ( 1 )
+opparm -V 19.5.368 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_calc_prim_u code ( 'float float_prim_vtx = vertexprimindex(0, i@vtxnum);\n\nprim_u = float_prim_vtx / (primvertexcount(0, i@primnum) - 1); ' ) namenum ( 1 ) name1 ( prim_u )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_calc_prim_u
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_calc_prim_u
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_calc_prim_u
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const1 (Vop/constant)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const1 = `run("opadd -e -n -v constant const1")`
+oplocate -x `$arg2 + 6.9152800000000001` -y `$arg3 + 4.8244199999999999` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const1
+opparm -V 19.5.368 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const1 floatdef ( -1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const1
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_compare1 (Vop/compare)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_compare1 = `run("opadd -e -n -v compare compare1")`
+oplocate -x `$arg2 + 12.7316` -y `$arg3 + 4.9744200000000003` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_compare1
+opparm -V 19.5.368 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_compare1 cmp ( lt ) input2 ( 1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_compare1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_compare1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_compare1
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_switch1 (Vop/switch)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_switch1 = `run("opadd -e -n -v switch switch1")`
+oplocate -x `$arg2 + 16.6751` -y `$arg3 + 5.1244199999999998` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_switch1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_switch1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_switch1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_switch1
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const2 (Vop/constant)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const2 = `run("opadd -e -n -v constant const2")`
+oplocate -x `$arg2 + 13.0069` -y `$arg3 + 3.61572` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const2
+opparm -V 19.5.368 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const2 consttype ( int ) intdef ( -1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const2
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const2
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const2
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_removepoint1 (Vop/removepoint)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_removepoint1 = `run("opadd -e -n -v removepoint removepoint1")`
+oplocate -x `$arg2 + 18.701599999999999` -y `$arg3 + 5.2744200000000001` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_removepoint1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_removepoint1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_removepoint1
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_removepoint1
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv2 (Vop/primuv)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv2 = `run("opadd -e -n -v primuv primuv2")`
+oplocate -x `$arg2 + 8.0822400000000005` -y `$arg3 + -7.9107399999999997` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv2
+opparm $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv2 attrib ( P )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv2
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv2
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv2
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv3 (Vop/primuv)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv3 = `run("opadd -e -n -v primuv primuv3")`
+oplocate -x `$arg2 + 7.66852` -y `$arg3 + -2.8326099999999999` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv3
+opparm $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv3 attrib ( P ) u ( 1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv3
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv3
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv3
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv4 (Vop/primuv)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv4 = `run("opadd -e -n -v primuv primuv4")`
+oplocate -x `$arg2 + 7.9522500000000003` -y `$arg3 + -5.3298899999999998` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv4
+opparm $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv4 attrib ( P ) u ( 0.5 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv4
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv4
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv4
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix1 (Vop/mix)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix1 = `run("opadd -e -n -v mix mix1")`
+oplocate -x `$arg2 + 10.6694` -y `$arg3 + -4.6676200000000003` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix1
+opparm $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix1 signature ( v )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix1
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix1
+
+# Node $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix2 (Vop/mix)
+set _obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix2 = `run("opadd -e -n -v mix mix2")`
+oplocate -x `$arg2 + 16.0047` -y `$arg3 + -3.6876199999999999` $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix2
+opparm $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix2 signature ( v )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix2
+opexprlanguage -s hscript $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix2
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix2
+opcf ..
+opcf $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point
+oporder -e geometryvopglobal1 geometryvopoutput1 xyzdist1 primuv1 bind1 subtract1 normalize1 calc_prim_u const1 compare1 switch1 const2 removepoint1 primuv2 primuv3 primuv4 mix1 mix2 
+opcf ..
+opset -p on $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point
+opcf $arg1
+
+# Node $_obj_swarm_0047_0050_mountain1 (Sop/attribnoise::2.0)
+set _obj_swarm_0047_0050_mountain1 = `run("opadd -e -n -v attribnoise::2.0 mountain1")`
+oplocate -x `$arg2 + 0` -y `$arg3 + -1.0000000119209282` $_obj_swarm_0047_0050_mountain1
+opparm $_obj_swarm_0047_0050_mountain1  remapramp ( 2 )
+opparm $_obj_swarm_0047_0050_mountain1 attribs ( P ) displace ( on ) noiserange ( zcentered ) amplitude ( 0.25 ) fractal ( hmfT ) oct ( 8 ) rough ( 0.40000000000000002 ) remapramp2pos ( 1 ) remapramp2value ( 1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_swarm_0047_0050_mountain1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_mountain1
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_mountain1
+opset -p on $_obj_swarm_0047_0050_mountain1
+opcf $arg1
+
+# Node $_obj_swarm_0047_0050_drawcurve7 (Sop/drawcurve)
+set _obj_swarm_0047_0050_drawcurve7 = `run("opadd -e -n -v drawcurve drawcurve7")`
+oplocate -x `$arg2 + -0.17527044781299139` -y `$arg3 + -3.7971302386281955` $_obj_swarm_0047_0050_drawcurve7
+opspareds '    parm {         name    "showguide"         baseparm         label   "Show Guide Geometry"         export  none     }     group {         name    "folder2"         label   "Curve"          parm {             name    "createwidthattrib"             baseparm             label   "Create Width Attribute"             export  none         }         parm {             name    "stroke_radius"             baseparm             label   "Radius"             export  all         }         parm {             name    "stroke_tool"             baseparm             label   "Tool"             export  none         }         parm {             name    "createcolorattrib"             baseparm             label   "Create Color Attribute"             export  none         }         parm {             name    "stroke_color"             baseparm             label   "Color"             export  none         }         parm {             name    "createstrokeattribs"             baseparm             label   "Create Stroke Attributes"             export  none         }         parm {             name    "stroke_opacity"             baseparm             label   "Opacity"             export  none         }     }      group {         name    "folder2_1"         label   "Projection"          parm {             name    "reprojection"             baseparm             label   "Live Reprojection"             export  none         }         parm {             name    "trimcurves"             baseparm             label   "Trim Curves"             export  none         }         parm {             name    "stroke_projtype"             baseparm             label   "Projection"             export  all         }         parm {             name    "stroke_projcenter"             baseparm             label   "Projection Center"             export  none         }     }      group {         name    "folder2_2"         label   "Stroke"          multiswitcher {             name    "stroke_numstrokes"             label    "Number of Strokes"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "stroke#_enable"                 baseparm                 label   "Enable Stroke"                 export  none             }             parm {                 name    "stroke#_radius"                 baseparm                 label   "Radius"                 export  none             }             parm {                 name    "stroke#_tool"                 baseparm                 label   "Tool"                 export  none             }             parm {                 name    "stroke#_color"                 baseparm                 label   "Color"                 export  none             }             parm {                 name    "stroke#_opacity"                 baseparm                 label   "Opacity"                 export  none             }             parm {                 name    "stroke#_projtype"                 baseparm                 label   "Projection"                 export  none             }             parm {                 name    "stroke#_projcenter"                 baseparm                 label   "Projection Center"                 export  none             }             parm {                 name    "stroke#_projdir"                 baseparm                 label   "Projection Direction"                 export  none             }             parm {                 name    "stroke#_data"                 baseparm                 label   "Raw Data"                 export  none             }         }      }  ' $_obj_swarm_0047_0050_drawcurve7
+opparm $_obj_swarm_0047_0050_drawcurve7  stroke_numstrokes ( 4 )
+opparm $_obj_swarm_0047_0050_drawcurve7 folder1 ( 2 2 2 ) createwidthattrib ( off ) stroke_radius ( 0.001 ) createcolorattrib ( off ) createstrokeattribs ( off ) stroke_projtype ( geometry ) stroke_numstrokes ( 4 ) folder2 ( 2 2 2 ) stroke1_radius ( 0.001 ) stroke1_projtype ( 4 ) stroke1_projdir ( 0.81175440549850464 -0.58374369144439697 -0.017265886068344116 ) stroke1_data ( 20000000A0000000071AA71C96274414962D91F3979E13F332D763FB9EAD0CDB000008F30000000000004B24000000000000000089D7E60C006760D3CD3228FB9A300000570A40F375A567E30000000010000000E61AA71C96274414FA7D91F344DE13F31FF763FBEBF4FBDB000008F377EBF9D300004B240000000000000000C037E60C00EE40D3A67708FB9A300000C57051F3314997E30000000010000000601AA71C2F274414167E91F3A7E323F3E73463FB024CABDB000008F321380CD300004B240000000000000000C6C3C60C0051F0D37FD877FB9A30000079BF24F3F3C83DE30000000010000000430AA71C40474414B0C0A1F38A3E23F31FBC53FB4AC10BDB000008F3981406E300004B2400000000000000008193860C002E04D390D116FBAD3000008D6C34E31BD683F30000000010000000130AA71C404744148961A1F3CAAE23F3CE0D53FBC040DADB000008F3000008E300004B2400000000000000000D1C860C000F56D36571A5FBAD3000002E4B6AE38C5FD2F30000000010000000CFF9A71C944744144112A1F3784133F3E33B53FBDA5F9ADB000008F3260189E300004B240000000000000000098E760C009EC7D3E1B835FBAD3000000DFD6EE3CC79E3F3000000001000000089F9A71C2D4744149362A1F34CD533F3A60753FBAED78ADB000008F35C020BE300004B2400000000000000000922560C001E16D3B36115FBAD3000006C2FEFE3084F47F3000000001000000016F9A71C61574414CF53A1F38CA833F35C4553FB7B1E3ADB000008F3CE158BE300004B24000000000000000009AB360C004465D3481674FBBD300000D780F2F3B33248D30000000010000000F5F9A71C6157441424B3A1F3C1E833F3F07553FBCB452ADB000008F3E4260DE300004B2400000000000000004C6E360C009926D3A39E34FBBD300000A29004F349C125D30000000010000000F5F9A71C6157441424B3A1F3C1E833F3F07553FBCB452ADB000008F31380C6F300004B2400000000000000004C6E360C009926D3A39E34FBBD300000A29004F349C125D30000000010000000 ) stroke2_radius ( 0.001 ) stroke2_projtype ( 4 ) stroke2_projdir ( 0.81175440549850464 -0.58374369144439697 -0.017265886068344116 ) stroke2_data ( 2000000060000000EBB9A71CD487441433A1E1F34F6C53F37A4833FB80C828D3000008F30000000000004B2400000000000000008D1F350C00DD6AD344AFCDF382600000594957F30F4CB8E30000000010000000DFA9A71CF597441436F0E1F37D4563F388DF23FB1F9DE7D3000008F30000000000004B2400000000000000008E39E40C086549D3ED31ADF382600000C19295F33C31F2F30000000010000000B6A9A71CD2A74414AE90E1F303EB63F3A66923FB367BB7D3000008F3F62138C300004B24000000000000000045ADA40C086F09D31EFA8DF3826000001788B4F3246187F30000000010000000AD59A71CED0844146AF4D1F36234A3F3E256F2FB3691E0D3000008F3E42601E300004B24000000000000000045B8230C0C6742E39F63D9F38C500000834B40F3C48845F30000000010000000F759A71C86184414B6A3D1F3C2A8A3F31632F2FB106810D3000008F3B3FDF4E300004B2400000000000000000E22130C047243E3D6C369F38C500000F10A08E3921207F30000000010000000F759A71C86184414B6A3D1F3C2A8A3F31632F2FB106810D3000008F31380C0F300004B2400000000000000000E22130C047243E3D6C369F38C500000F10A08E3921207F30000000010000000 ) stroke3_radius ( 0.001 ) stroke3_projtype ( 4 ) stroke3_projdir ( 0.81175440549850464 -0.58374369144439697 -0.017265886068344116 ) stroke3_data ( 2000000060000000A987A71CF78A44142F48F1F33F3DB4F38E8F71FBF874FED3000008F30000000000004B2400000000000000000ED784F300DF01D38A04240439700000923BEBE3C01DCAE30000000010000000DC97A71C4E6A44140B56F1F31183B4F3B71091FBAF816ED3000008F30000000000004B240000000000000000091FE2F300C4A2CBC77DB30416700000482B16F3769395F3000000001000000030D7A71CB92A44142820F1F3987994F34C6CB1FB2CCD8CD3000008F36B3FDFC300004B24000000000000000002053CE300A12DDB48597204F270000017B49AE36980DBE30000000010000000EE08A71C58D944142904E1F3314B74F3C1A2F1FBFD06F8D3000008F35C0203E300004B240000000000000000063EEAEB00AC8AD359D0FFF38960000073A078E38D6835F300000000100000006518A71CCFC944140E03E1F390C774F3AD08F1FBDD4BA8D3000008F3981406E300004B240000000000000000066D2CEB005779D385B09FF3896000001D52A0D3706A22F300000000100000006518A71CCFC944140E03E1F390C774F3AD08F1FBDD4BA8D3000008F35C0205F300004B240000000000000000066D2CEB005779D385B09FF3896000001D52A0D3706A22F30000000010000000 ) stroke4_radius ( 0.001 ) stroke4_projtype ( 4 ) stroke4_projdir ( 0.81175440549850464 -0.58374369144439697 -0.017265886068344116 ) stroke4_data ( 20000000800000004EE6A71C7E9B44148E7471F3563505F3B90CC0FB2F0E04EB000008F30000000000004B2400000000000000000D2DC104000948D3CA75660CA41000006494D5F3F1EB10F30000000010000000DCE6A71C7E9B4414C7C871F3329B05F320CFC0FBEBA073EB000008F3E62138C300004B240000000000000000C03B91040099ECD36FD6750CCA10000047E5ACB3C26098E300000000100000008207A71C2C7B4414926181F3B15905F38F4BE0FBD7C232EB000008F3213804D300004B24000000000000000008A7410400084BAB73FEA30CD02000007B7504E311E2E5F300000000100000000807A71C937B44141F5381F3E25805F3B4F1F0FBA6F8E1EB000008F3213804D300004B2400000000000000008EA26104003427DBA2EE430CD0200000DD3C52F316A4F7F30000000010000000E627A71C744B4414715C81F3884FF4F3097411FBA6AA90EB000008F3000000E300004B24000000000000000086E7700400166FDB9D60610CF92000002CB6E5C3C5DAF5F300000000100000006627A71C744B441413AD81F3CBB005F37C4511FBD61960EB000008F3B3FDF4F300004B2400000000000000008405400408B3DADB23D2110CF9200000F2415CE3A88512F30000000010000000D427A71C744B4414B04291F3429505F3E50811FB56667FDB000008F3000006F300004B240000000000000000C33C100400E1A5DBC7BA100C0D200000E68721F3CB2BEDE30000000010000000D427A71C744B4414B04291F3429505F3E50811FB56667FDB000008F36B3FDAF300004B240000000000000000C33C100400E1A5DBC7BA100C0D200000E68721F3CB2BEDE30000000010000000 )
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_swarm_0047_0050_drawcurve7
+opexprlanguage -s hscript $_obj_swarm_0047_0050_drawcurve7
+opuserdata -n '___Version___' -v '' $_obj_swarm_0047_0050_drawcurve7
+opuserdata -n '___toolcount___' -v '3' $_obj_swarm_0047_0050_drawcurve7
+opuserdata -n '___toolid___' -v 'sop_groom_drawpartingline' $_obj_swarm_0047_0050_drawcurve7
+opset -p on $_obj_swarm_0047_0050_drawcurve7
+opcf $arg1
+
+# Node $_obj_swarm_0047_0050_normal2 (Sop/normal)
+set _obj_swarm_0047_0050_normal2 = `run("opadd -e -n -v normal normal2")`
+oplocate -x `$arg2 + 0.32048948982492931` -y `$arg3 + -1.9743608646558641` $_obj_swarm_0047_0050_normal2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_swarm_0047_0050_normal2
+opexprlanguage -s hscript $_obj_swarm_0047_0050_normal2
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0047_0050_normal2
+opset -p on $_obj_swarm_0047_0050_normal2
+opcf $arg1
+
+# Node $_obj_swarm_0047_0050_copytopoints1 (Sop/copytopoints::2.0)
+set _obj_swarm_0047_0050_copytopoints1 = `run("opadd -e -n -v copytopoints::2.0 copytopoints1")`
+oplocate -x `$arg2 + -0.22543302412767474` -y `$arg3 + -7.2085193226880602` $_obj_swarm_0047_0050_copytopoints1
+opparm $_obj_swarm_0047_0050_copytopoints1  targetattribs ( 3 )
+opparm -V 19.5.368 $_obj_swarm_0047_0050_copytopoints1 pack ( on ) targetattribs ( 3 ) applyattribs1 ( *,^v,^Alpha,^N,^up,^pscale,^scale,^orient,^rot,^pivot,^trans,^transform ) applymethod2 ( mult ) applyattribs2 ( Alpha ) applymethod3 ( add ) applyattribs3 ( v )
+opset -d off -r off -h off -f off -y off -t on -l off -s off -u off -F on -c on -e on -b off $_obj_swarm_0047_0050_copytopoints1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_copytopoints1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0047_0050_copytopoints1
+opset -p on $_obj_swarm_0047_0050_copytopoints1
+opcf $arg1
+
+# Node $_obj_swarm_0047_0050_grid1 (Sop/grid)
+set _obj_swarm_0047_0050_grid1 = `run("opadd -e -n -v grid grid1")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_swarm_0047_0050_grid1
+opparm -V 19.5.368 $_obj_swarm_0047_0050_grid1 rows ( 50 ) cols ( 50 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_swarm_0047_0050_grid1
+opexprlanguage -s hscript $_obj_swarm_0047_0050_grid1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_swarm_0047_0050_grid1
+opset -p on $_obj_swarm_0047_0050_grid1
+
+opcf $arg1
+opcf $arg1
+opwire -n $_obj_swarm_0047_0050_drawcurve7 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point
+opwire -n $_obj_swarm_0047_0050_normal2 -1 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point
+opcf $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix2 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopoutput1
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_normalize1 -4 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopoutput1
+opwire -n -o 19 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_xyzdist1
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1 -2 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_xyzdist1
+opwire -n -o 19 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv1
+opwire -n -o 1 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_xyzdist1 -2 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv1
+opwire -n -o 2 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_xyzdist1 -3 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv1
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv1 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_bind1
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv3 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_subtract1
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix1 -1 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_subtract1
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_subtract1 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_normalize1
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const1 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_calc_prim_u
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_calc_prim_u -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_compare1
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_compare1 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_switch1
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_const2 -1 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_switch1
+opwire -n -o 12 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1 -2 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_switch1
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_switch1 -1 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_removepoint1
+opwire -n -o 18 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv2
+opwire -n -o 13 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1 -2 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv2
+opwire -n -o 18 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv3
+opwire -n -o 13 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1 -2 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv3
+opwire -n -o 18 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv4
+opwire -n -o 13 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_geometryvopglobal1 -2 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv4
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv4 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix1
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv2 -1 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix1
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_primuv3 -0 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix2
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix1 -1 $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point_mix2
+opcf ..
+opcf $arg1
+opwire -n $_obj_swarm_0047_0050_grid1 -0 $_obj_swarm_0047_0050_mountain1
+opcf $arg1
+opwire -n $_obj_swarm_0047_0050_normal2 -0 $_obj_swarm_0047_0050_drawcurve7
+opcf $arg1
+opwire -n $_obj_swarm_0047_0050_mountain1 -0 $_obj_swarm_0047_0050_normal2
+opcf $arg1
+opwire -n $_obj_swarm_0047_0050_platonic1 -0 $_obj_swarm_0047_0050_copytopoints1
+opwire -n $_obj_swarm_0047_0050_set_N_and_up_and_collapse_to_point -1 $_obj_swarm_0047_0050_copytopoints1
+opcf $arg1
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_swarm_0047_0050_copytopoints1
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_swarm_0047_0050_grid1
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="sop_switcher" label="Sop Switcher" icon="MISC_generic">
+    <toolMenuContext name="network">
+      <contextOpType>Sop/null</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'switch' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_crowd_main_crowd_pass_through_everything_else2 (Sop/null)
+set _obj_crowd_main_crowd_pass_through_everything_else2 = `run("opadd -e -n -v null pass_through_everything_else2")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_crowd_main_crowd_pass_through_everything_else2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_crowd_main_crowd_pass_through_everything_else2
+opexprlanguage -s hscript $_obj_crowd_main_crowd_pass_through_everything_else2
+opuserdata -n '___Version___' -v '20.5.487' $_obj_crowd_main_crowd_pass_through_everything_else2
+opset -p on $_obj_crowd_main_crowd_pass_through_everything_else2
+opcf $arg1
+
+# Node $_obj_crowd_main_crowd_cam_0590 (Sop/null)
+set _obj_crowd_main_crowd_cam_0590 = `run("opadd -e -n -v null cam_0590")`
+oplocate -x `$arg2 + 5.8668570182815101` -y `$arg3 + 1.1572991945280222` $_obj_crowd_main_crowd_cam_0590
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_crowd_main_crowd_cam_0590
+opexprlanguage -s hscript $_obj_crowd_main_crowd_cam_0590
+opuserdata -n '___Version___' -v '20.5.487' $_obj_crowd_main_crowd_cam_0590
+opset -p on $_obj_crowd_main_crowd_cam_0590
+opcf $arg1
+
+# Node $_obj_crowd_main_crowd_cam_switch4 (Sop/switch)
+set _obj_crowd_main_crowd_cam_switch4 = `run("opadd -e -n -v switch cam_switch4")`
+oplocate -x `$arg2 + 2.1485199999999995` -y `$arg3 + -3.3500999999999976` $_obj_crowd_main_crowd_cam_switch4
+opspareds '    parm {         name    "current_camera"         label   "Current Camera"         type    string         default { "" }         parmtag { "script_callback_language" "python" }     }     parm {         name    "input"         baseparm         label   "Select Input"         export  all     } ' $_obj_crowd_main_crowd_cam_switch4
+chblockbegin
+chadd -t 41.666666666666664 41.666666666666664 $_obj_crowd_main_crowd_cam_switch4 input
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0.33333333333333331 -A 0.33333333333333331 -T a  -o mM  -F 'node = hou.pwd()\ncurrent_cam = node.parm("current_camera").eval()\ncam_index = -1\n\nfor i in range(len(node.inputConnections())):\n   if current_cam in node.input(i).name():\n      cam_index = i\n\nreturn cam_index' -l p $_obj_crowd_main_crowd_cam_switch4/input
+chadd -t 45.791666666666664 45.791666666666664 $_obj_crowd_main_crowd_cam_switch4 current_camera
+chkey -t 45.791666666666664 -v 0 -m 0 -a 0.33333333333333331 -A 0.33333333333333331 -T a  -o mM  -F 'chs("/obj/camSwitcher/current_camera")' $_obj_crowd_main_crowd_cam_switch4/current_camera
+chblockend
+opparm -V 20.5.487 $_obj_crowd_main_crowd_cam_switch4 input ( input ) current_camera ( current_camera )
+chlock $_obj_crowd_main_crowd_cam_switch4 +input +current_camera
+chautoscope $_obj_crowd_main_crowd_cam_switch4 +input +current_camera
+opcolor -c 0.4779999852180481 0.4779999852180481 0.4779999852180481 $_obj_crowd_main_crowd_cam_switch4
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_crowd_main_crowd_cam_switch4
+opexprlanguage -s hscript $_obj_crowd_main_crowd_cam_switch4
+opuserdata -n '___Version___' -v '20.5.487' $_obj_crowd_main_crowd_cam_switch4
+opset -p on $_obj_crowd_main_crowd_cam_switch4
+
+opcf $arg1
+opwire -n $_obj_crowd_main_crowd_slow_down1 -0 $_obj_crowd_main_crowd_pass_through_everything_else2
+opcf $arg1
+opwire -n $_obj_crowd_main_crowd_attribdelete2 -0 $_obj_crowd_main_crowd_cam_0590
+opcf $arg1
+opwire -n $_obj_crowd_main_crowd_pass_through_everything_else2 -0 $_obj_crowd_main_crowd_cam_switch4
+opwire -n $_obj_crowd_main_crowd_cam_0590 -1 $_obj_crowd_main_crowd_cam_switch4
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_crowd_main_crowd_cam_switch4
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_crowd_main_crowd_pass_through_everything_else2
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

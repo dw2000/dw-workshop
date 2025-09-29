@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="speed_analysis" label="Speed Analysis" icon="SOP_pointvelocity">
+    <helpURL>operator:Sop/subnet</helpURL>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/subnet</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'subnet' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_geo1_speed_analysis (Sop/subnet)
+set _obj_geo1_speed_analysis = `run("opadd -e -n -v subnet speed_analysis")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_geo1_speed_analysis
+opspareds '    parm {         name    "label1"         baseparm         label   "Input #1 Label"         invisible         export  all     }     parm {         name    "label2"         baseparm         label   "Input #2 Label"         invisible         export  all     }     parm {         name    "label3"         baseparm         label   "Input #3 Label"         invisible         export  all     }     parm {         name    "label4"         baseparm         label   "Input #4 Label"         invisible         export  all     }     parm {         name    "min_speed"         label   "Min Speed"         type    float         default { "0" }         range   { 0 10 }         parmtag { "script_callback_language" "python" }     }     parm {         name    "max_speed"         label   "Max Speed"         type    float         default { "0" }         range   { 0 10 }         parmtag { "script_callback_language" "python" }     }     parm {         name    "avg_speed"         label   "Average Speed"         type    float         default { "0" }         range   { 0 10 }         parmtag { "script_callback_language" "python" }     } ' $_obj_geo1_speed_analysis
+chblockbegin
+chadd -t 40 40 $_obj_geo1_speed_analysis min_speed
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'detail("./OUT", "min_speed", 0)' $_obj_geo1_speed_analysis/min_speed
+chadd -t 40 40 $_obj_geo1_speed_analysis max_speed
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'detail("./OUT", "max_speed", 0)' $_obj_geo1_speed_analysis/max_speed
+chadd -t 40 40 $_obj_geo1_speed_analysis avg_speed
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'detail("./OUT", "avg_speed", 0)' $_obj_geo1_speed_analysis/avg_speed
+chblockend
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_speed_analysis
+opexprlanguage -s hscript $_obj_geo1_speed_analysis
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_speed_analysis
+opcf $_obj_geo1_speed_analysis
+
+# Node $_obj_geo1_speed_analysis_speed (Sop/attribwrangle)
+set _obj_geo1_speed_analysis_speed = `run("opadd -e -n -v attribwrangle speed")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 6.1117999999999997` $_obj_geo1_speed_analysis_speed
+opparm $_obj_geo1_speed_analysis_speed  bindings ( 0 ) groupbindings ( 0 )
+opparm $_obj_geo1_speed_analysis_speed snippet ( 'f@__speed = length(v@v);\n' )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_speed_analysis_speed
+opexprlanguage -s hscript $_obj_geo1_speed_analysis_speed
+opuserdata -n '___Version___' -v '' $_obj_geo1_speed_analysis_speed
+
+# Node $_obj_geo1_speed_analysis_attribpromote3 (Sop/attribpromote)
+set _obj_geo1_speed_analysis_attribpromote3 = `run("opadd -e -n -v attribpromote attribpromote3")`
+oplocate -x `$arg2 + -0.00044999999999999999` -y `$arg3 + 5.1063000000000001` $_obj_geo1_speed_analysis_attribpromote3
+opparm -V 19.5.368 $_obj_geo1_speed_analysis_attribpromote3 inname ( __speed ) outclass ( detail ) useoutname ( on ) outname ( avg_speed ) deletein ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_speed_analysis_attribpromote3
+opexprlanguage -s hscript $_obj_geo1_speed_analysis_attribpromote3
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_speed_analysis_attribpromote3
+
+# Node $_obj_geo1_speed_analysis_attribpromote4 (Sop/attribpromote)
+set _obj_geo1_speed_analysis_attribpromote4 = `run("opadd -e -n -v attribpromote attribpromote4")`
+oplocate -x `$arg2 + 0.18684999999999999` -y `$arg3 + 3.1063000000000001` $_obj_geo1_speed_analysis_attribpromote4
+opparm -V 19.5.368 $_obj_geo1_speed_analysis_attribpromote4 inname ( __speed ) outclass ( detail ) method ( max ) useoutname ( on ) outname ( max_speed ) deletein ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_speed_analysis_attribpromote4
+opexprlanguage -s hscript $_obj_geo1_speed_analysis_attribpromote4
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_speed_analysis_attribpromote4
+
+# Node $_obj_geo1_speed_analysis_attribpromote5 (Sop/attribpromote)
+set _obj_geo1_speed_analysis_attribpromote5 = `run("opadd -e -n -v attribpromote attribpromote5")`
+oplocate -x `$arg2 + 0.18684999999999999` -y `$arg3 + 4.1063000000000001` $_obj_geo1_speed_analysis_attribpromote5
+opparm -V 19.5.368 $_obj_geo1_speed_analysis_attribpromote5 inname ( __speed ) outclass ( detail ) method ( min ) useoutname ( on ) outname ( min_speed ) deletein ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_speed_analysis_attribpromote5
+opexprlanguage -s hscript $_obj_geo1_speed_analysis_attribpromote5
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_speed_analysis_attribpromote5
+
+# Node $_obj_geo1_speed_analysis_OUT (Sop/output)
+set _obj_geo1_speed_analysis_OUT = `run("opadd -e -n -v output OUT")`
+oplocate -x `$arg2 + 0.88124999999999998` -y `$arg3 + 0.748865` $_obj_geo1_speed_analysis_OUT
+opparm -V 19.5.368 $_obj_geo1_speed_analysis_OUT outputidx ( 0 )
+chlock $_obj_geo1_speed_analysis_OUT +outputidx
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_speed_analysis_OUT
+opexprlanguage -s hscript $_obj_geo1_speed_analysis_OUT
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_speed_analysis_OUT
+
+# Node $_obj_geo1_speed_analysis_attribdelete1 (Sop/attribdelete)
+set _obj_geo1_speed_analysis_attribdelete1 = `run("opadd -e -n -v attribdelete attribdelete1")`
+oplocate -x `$arg2 + 0.52039899999999994` -y `$arg3 + 2.07484` $_obj_geo1_speed_analysis_attribdelete1
+opparm $_obj_geo1_speed_analysis_attribdelete1 ptdel ( __speed )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_speed_analysis_attribdelete1
+opexprlanguage -s hscript $_obj_geo1_speed_analysis_attribdelete1
+opuserdata -n '___Version___' -v '' $_obj_geo1_speed_analysis_attribdelete1
+
+# Node $_obj_geo1_speed_analysis_compute_v (Sop/trail)
+set _obj_geo1_speed_analysis_compute_v = `run("opadd -e -n -v trail compute_v")`
+oplocate -x `$arg2 + 1.0966800000000001` -y `$arg3 + 9.1764200000000002` $_obj_geo1_speed_analysis_compute_v
+opparm -V 19.5.368 $_obj_geo1_speed_analysis_compute_v result ( velocity ) velapproximation ( 'Central Difference' ) matchbyattribute ( on )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_speed_analysis_compute_v
+opexprlanguage -s hscript $_obj_geo1_speed_analysis_compute_v
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_speed_analysis_compute_v
+
+# Node $_obj_geo1_speed_analysis_switch_if_no_v (Sop/switch)
+set _obj_geo1_speed_analysis_switch_if_no_v = `run("opadd -e -n -v switch switch_if_no_v")`
+oplocate -x `$arg2 + -0.39664300000000002` -y `$arg3 + 7.7870499999999998` $_obj_geo1_speed_analysis_switch_if_no_v
+chblockbegin
+chadd -t 40 40 $_obj_geo1_speed_analysis_switch_if_no_v input
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F '1 - haspointattrib(0, "v")' $_obj_geo1_speed_analysis_switch_if_no_v/input
+chblockend
+opparm -V 19.5.368 $_obj_geo1_speed_analysis_switch_if_no_v input ( input )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_speed_analysis_switch_if_no_v
+opexprlanguage -s hscript $_obj_geo1_speed_analysis_switch_if_no_v
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_speed_analysis_switch_if_no_v
+
+# Node $_obj_geo1_speed_analysis_null1 (Sop/null)
+set _obj_geo1_speed_analysis_null1 = `run("opadd -e -n -v null null1")`
+oplocate -x `$arg2 + -0.52189300000000005` -y `$arg3 + 10.745900000000001` $_obj_geo1_speed_analysis_null1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_speed_analysis_null1
+opexprlanguage -s hscript $_obj_geo1_speed_analysis_null1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_geo1_speed_analysis_null1
+oporder -e speed attribpromote3 attribpromote4 attribpromote5 OUT attribdelete1 compute_v switch_if_no_v null1 
+opcf ..
+opset -p on $_obj_geo1_speed_analysis
+
+opcf $arg1
+opcf $_obj_geo1_speed_analysis
+opwire -n $_obj_geo1_speed_analysis_switch_if_no_v -0 $_obj_geo1_speed_analysis_speed
+opwire -n $_obj_geo1_speed_analysis_speed -0 $_obj_geo1_speed_analysis_attribpromote3
+opwire -n $_obj_geo1_speed_analysis_attribpromote5 -0 $_obj_geo1_speed_analysis_attribpromote4
+opwire -n $_obj_geo1_speed_analysis_attribpromote3 -0 $_obj_geo1_speed_analysis_attribpromote5
+opwire -n $_obj_geo1_speed_analysis_attribdelete1 -0 $_obj_geo1_speed_analysis_OUT
+opwire -n $_obj_geo1_speed_analysis_attribpromote4 -0 $_obj_geo1_speed_analysis_attribdelete1
+opwire -n $_obj_geo1_speed_analysis_null1 -0 $_obj_geo1_speed_analysis_compute_v
+opwire -n $_obj_geo1_speed_analysis_null1 -0 $_obj_geo1_speed_analysis_switch_if_no_v
+opwire -n $_obj_geo1_speed_analysis_compute_v -1 $_obj_geo1_speed_analysis_switch_if_no_v
+opwire -n -i 0 -0 $_obj_geo1_speed_analysis_null1
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_geo1_speed_analysis
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_geo1_speed_analysis
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

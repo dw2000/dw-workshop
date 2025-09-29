@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="vdb_with_Y_ramp" label="VDB with Y Ramp" icon="SOP_OpenVDB">
+    <toolMenuContext name="network">
+      <contextOpType>Sop/vdbfrompolygons</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'volume' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_plaque_setup_vdbfrompolygons1 (Sop/vdbfrompolygons)
+set _obj_plaque_setup_vdbfrompolygons1 = `run("opadd -e -n -v vdbfrompolygons vdbfrompolygons1")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_plaque_setup_vdbfrompolygons1
+opparm $_obj_plaque_setup_vdbfrompolygons1  numattrib ( 0 )
+opparm -V 19.5.368 $_obj_plaque_setup_vdbfrompolygons1 voxelsize ( 0.001 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_plaque_setup_vdbfrompolygons1
+opexprlanguage -s hscript $_obj_plaque_setup_vdbfrompolygons1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_plaque_setup_vdbfrompolygons1
+opset -p on $_obj_plaque_setup_vdbfrompolygons1
+opcf $arg1
+
+# Node $_obj_plaque_setup_Y_mask (Sop/volumevop)
+set _obj_plaque_setup_Y_mask = `run("opadd -e -n -v volumevop Y_mask")`
+oplocate -x `$arg2 + -3.2445738060282707` -y `$arg3 + -3.5722609822739395` $_obj_plaque_setup_Y_mask
+opspareds '    group {         name    "stdswitcher3"         label   "Vex Setup"          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vexsnippet"             baseparm             label   "Snippet"             export  none         }         parm {             name    "vex_exportlist"             baseparm             label   "Volumes to Write to"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }         parm {             name    "prunevdbblocks"             baseparm             label   "Prune VDB Blocks"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Volume Bindings"          parm {             name    "vex_geometrygenerator"             baseparm             label   "Only Output Created Geometry"             export  none         }         parm {             name    "vdb_signedflood"             baseparm             label   "Signed-Flood Fill Output SDF VDBs"             export  none         }         parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         parm {             name    "bindeach"             baseparm             label   "Bind Each to Density"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             disablewhen "{ autobind == 1 } { bindeach == 1 }"             parmtag { "multistartoffset" "1" }              parm {                 name    "bindprimname#"                 baseparm                 label   "Primitive Name"                 export  none             }             parm {                 name    "bindprim#"                 baseparm                 label   "Primitive"                 export  none             }             parm {                 name    "bindname#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }     }      parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "ix"         label   "IX"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "iy"         label   "IY"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "iz"         label   "IZ"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "resx"         label   "ResX"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "resy"         label   "ResY"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "resz"         label   "ResZ"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "dPdx"         label   "dPdx"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "dPdy"         label   "dPdy"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "dPdz"         label   "dPdz"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "center"         label   "Center"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Timeinc"         label   "Timeinc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "density"         label   "density"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "ramp"         label   "ramp"         type    ramp_flt         default { "2" }         range   { 1! 10 }         parmtag { "parmvop" "1" }         parmtag { "rampbasis_var" "ramp_the_basis_strings" }         parmtag { "rampbasisdefault" "monotonecubic" }         parmtag { "rampfloatdefault" "1pos ( 0 ) 1value ( 0 ) 1interp ( linear ) 2pos ( 1 ) 2value ( 1 ) 2interp ( linear )" }         parmtag { "rampkeys_var" "ramp_the_key_positions" }         parmtag { "rampshowcontrolsdefault" "1" }         parmtag { "rampvalues_var" "ramp_the_key_values" }         parmtag { "shaderparmcontexts" "cvex" }     } ' $_obj_plaque_setup_Y_mask
+opparm $_obj_plaque_setup_Y_mask  bindings ( 0 ) ramp ( 2 )
+opparm -V 19.5.368 $_obj_plaque_setup_Y_mask stdswitcher ( 1 1 ) autobind ( off ) bindeach ( on ) ramp1pos ( 0.3559037446975708 ) ramp1value ( 1 ) ramp2pos ( 0.73642975091934204 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_plaque_setup_Y_mask
+opexprlanguage -s hscript $_obj_plaque_setup_Y_mask
+opuserdata -n '___Version___' -v '19.5.368' $_obj_plaque_setup_Y_mask
+opcf $_obj_plaque_setup_Y_mask
+
+# Node $_obj_plaque_setup_Y_mask_volumevopglobal1 (Vop/volumevopglobal)
+set _obj_plaque_setup_Y_mask_volumevopglobal1 = `run("opadd -e -n -v volumevopglobal volumevopglobal1")`
+oplocate -x `$arg2 + -4.04549` -y `$arg3 + 2.81894` $_obj_plaque_setup_Y_mask_volumevopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_plaque_setup_Y_mask_volumevopglobal1
+opexprlanguage -s hscript $_obj_plaque_setup_Y_mask_volumevopglobal1
+opuserdata -n '___Version___' -v '' $_obj_plaque_setup_Y_mask_volumevopglobal1
+
+# Node $_obj_plaque_setup_Y_mask_volumevopoutput1 (Vop/volumevopoutput)
+set _obj_plaque_setup_Y_mask_volumevopoutput1 = `run("opadd -e -n -v volumevopoutput volumevopoutput1")`
+oplocate -x `$arg2 + 16.693899999999999` -y `$arg3 + 0.83768299999999996` $_obj_plaque_setup_Y_mask_volumevopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_plaque_setup_Y_mask_volumevopoutput1
+opexprlanguage -s hscript $_obj_plaque_setup_Y_mask_volumevopoutput1
+opuserdata -n '___Version___' -v '' $_obj_plaque_setup_Y_mask_volumevopoutput1
+
+# Node $_obj_plaque_setup_Y_mask_ramp1 (Vop/rampparm)
+set _obj_plaque_setup_Y_mask_ramp1 = `run("opadd -e -n -v rampparm ramp1")`
+oplocate -x `$arg2 + 7.2173400000000001` -y `$arg3 + 0.080639299999999997` $_obj_plaque_setup_Y_mask_ramp1
+opparm $_obj_plaque_setup_Y_mask_ramp1  rampcolordefault ( 2 ) rampfloatdefault ( 2 )
+opparm -V 19.5.368 $_obj_plaque_setup_Y_mask_ramp1 ramptype ( flt ) rampbasisdefault ( monotonecubic ) rampcolordefault2pos ( 1 ) rampcolordefault2c ( 1 1 1 ) rampfloatdefault2pos ( 1 ) rampfloatdefault2value ( 1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_plaque_setup_Y_mask_ramp1
+opexprlanguage -s hscript $_obj_plaque_setup_Y_mask_ramp1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_plaque_setup_Y_mask_ramp1
+
+# Node $_obj_plaque_setup_Y_mask_multiply1 (Vop/multiply)
+set _obj_plaque_setup_Y_mask_multiply1 = `run("opadd -e -n -v multiply multiply1")`
+oplocate -x `$arg2 + 10.633800000000001` -y `$arg3 + 1.9469399999999999` $_obj_plaque_setup_Y_mask_multiply1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_plaque_setup_Y_mask_multiply1
+opexprlanguage -s hscript $_obj_plaque_setup_Y_mask_multiply1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_plaque_setup_Y_mask_multiply1
+
+# Node $_obj_plaque_setup_Y_mask_relbbox1 (Vop/relbbox)
+set _obj_plaque_setup_Y_mask_relbbox1 = `run("opadd -e -n -v relbbox relbbox1")`
+oplocate -x `$arg2 + 1.2173400000000001` -y `$arg3 + 0.45768300000000001` $_obj_plaque_setup_Y_mask_relbbox1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_plaque_setup_Y_mask_relbbox1
+opexprlanguage -s hscript $_obj_plaque_setup_Y_mask_relbbox1
+opuserdata -n '___Version___' -v '' $_obj_plaque_setup_Y_mask_relbbox1
+
+# Node $_obj_plaque_setup_Y_mask_vectofloat1 (Vop/vectofloat)
+set _obj_plaque_setup_Y_mask_vectofloat1 = `run("opadd -e -n -v vectofloat vectofloat1")`
+oplocate -x `$arg2 + 4.2173400000000001` -y `$arg3 + 0.25437199999999999` $_obj_plaque_setup_Y_mask_vectofloat1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_plaque_setup_Y_mask_vectofloat1
+opexprlanguage -s hscript $_obj_plaque_setup_Y_mask_vectofloat1
+opuserdata -n '___Version___' -v '' $_obj_plaque_setup_Y_mask_vectofloat1
+opcf ..
+opcf $_obj_plaque_setup_Y_mask
+oporder -e volumevopglobal1 volumevopoutput1 ramp1 multiply1 relbbox1 vectofloat1 
+opcf ..
+opset -p on $_obj_plaque_setup_Y_mask
+opcf $arg1
+
+# Node $_obj_plaque_setup_convertvdb5 (Sop/convertvdb)
+set _obj_plaque_setup_convertvdb5 = `run("opadd -e -n -v convertvdb convertvdb5")`
+oplocate -x `$arg2 + -3.0997738060282671` -y `$arg3 + -4.9606509822739397` $_obj_plaque_setup_convertvdb5
+opparm -V 19.5.368 $_obj_plaque_setup_convertvdb5 conversion ( vdb )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_plaque_setup_convertvdb5
+opexprlanguage -s hscript $_obj_plaque_setup_convertvdb5
+opuserdata -n '___Version___' -v '19.5.368' $_obj_plaque_setup_convertvdb5
+opset -p on $_obj_plaque_setup_convertvdb5
+opcf $arg1
+
+# Node $_obj_plaque_setup_vdbsmoothsdf10 (Sop/vdbsmoothsdf)
+set _obj_plaque_setup_vdbsmoothsdf10 = `run("opadd -e -n -v vdbsmoothsdf vdbsmoothsdf10")`
+oplocate -x `$arg2 + -3.0985738060282699` -y `$arg3 + -6.8350009822739395` $_obj_plaque_setup_vdbsmoothsdf10
+opparm -V 19.5.368 $_obj_plaque_setup_vdbsmoothsdf10 maskname ( '@name=density' ) operation ( gaussian )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_plaque_setup_vdbsmoothsdf10
+opexprlanguage -s hscript $_obj_plaque_setup_vdbsmoothsdf10
+opuserdata -n '___Version___' -v '19.5.368' $_obj_plaque_setup_vdbsmoothsdf10
+opset -p on $_obj_plaque_setup_vdbsmoothsdf10
+opcf $arg1
+
+# Node $_obj_plaque_setup_box1 (Sop/box)
+set _obj_plaque_setup_box1 = `run("opadd -e -n -v box box1")`
+oplocate -x `$arg2 + -3.0985738060282699` -y `$arg3 + -1.1741709822739395` $_obj_plaque_setup_box1
+opparm -V 19.5.368 $_obj_plaque_setup_box1 type ( polymesh ) divrate ( 2 2 2 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_plaque_setup_box1
+opexprlanguage -s hscript $_obj_plaque_setup_box1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_plaque_setup_box1
+opset -p on $_obj_plaque_setup_box1
+opcf $arg1
+
+# Node $_obj_plaque_setup_volume1 (Sop/volume)
+set _obj_plaque_setup_volume1 = `run("opadd -e -n -v volume volume1")`
+oplocate -x `$arg2 + -2.7145738060282696` -y `$arg3 + -2.0297529822739393` $_obj_plaque_setup_volume1
+opparm -V 19.5.368 $_obj_plaque_setup_volume1 name ( density ) initialval ( 1 0 0 ) uniformsamples ( size ) divsize ( 0.002 ) volborder ( streak )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_plaque_setup_volume1
+opexprlanguage -s hscript $_obj_plaque_setup_volume1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_plaque_setup_volume1
+opset -p on $_obj_plaque_setup_volume1
+
+opcf $arg1
+opwire -n $_obj_plaque_setup_merge2 -0 $_obj_plaque_setup_vdbfrompolygons1
+opcf $arg1
+opwire -n $_obj_plaque_setup_volume1 -0 $_obj_plaque_setup_Y_mask
+opcf $_obj_plaque_setup_Y_mask
+opwire -n $_obj_plaque_setup_Y_mask_multiply1 -0 $_obj_plaque_setup_Y_mask_volumevopoutput1
+opwire -n -o 1 $_obj_plaque_setup_Y_mask_vectofloat1 -0 $_obj_plaque_setup_Y_mask_ramp1
+opwire -n -o 1 $_obj_plaque_setup_Y_mask_volumevopglobal1 -0 $_obj_plaque_setup_Y_mask_multiply1
+opwire -n $_obj_plaque_setup_Y_mask_ramp1 -1 $_obj_plaque_setup_Y_mask_multiply1
+opwire -n -o 18 $_obj_plaque_setup_Y_mask_volumevopglobal1 -0 $_obj_plaque_setup_Y_mask_relbbox1
+opwire -n $_obj_plaque_setup_Y_mask_volumevopglobal1 -2 $_obj_plaque_setup_Y_mask_relbbox1
+opwire -n $_obj_plaque_setup_Y_mask_relbbox1 -0 $_obj_plaque_setup_Y_mask_vectofloat1
+opcf ..
+opcf $arg1
+opwire -n $_obj_plaque_setup_Y_mask -0 $_obj_plaque_setup_convertvdb5
+opcf $arg1
+opwire -n $_obj_plaque_setup_vdbfrompolygons1 -0 $_obj_plaque_setup_vdbsmoothsdf10
+opwire -n $_obj_plaque_setup_convertvdb5 -1 $_obj_plaque_setup_vdbsmoothsdf10
+opcf $arg1
+opwire -n $_obj_plaque_setup_vdbfrompolygons1 -0 $_obj_plaque_setup_box1
+opcf $arg1
+opwire -n $_obj_plaque_setup_box1 -0 $_obj_plaque_setup_volume1
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_plaque_setup_vdbsmoothsdf10
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_plaque_setup_vdbfrompolygons1
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

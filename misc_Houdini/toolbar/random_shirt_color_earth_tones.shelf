@@ -1,0 +1,489 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="attribvop" label="random_shirt_color_earth_tones" icon="SOP_attribvop">
+    <helpURL>operator:Sop/attribvop</helpURL>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribvop</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'attribvop' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones (Sop/attribvop)
+set _obj_crowd_setup_random_shirt_color_earth_tones = `run("opadd -e -n -v attribvop random_shirt_color_earth_tones")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_crowd_setup_random_shirt_color_earth_tones
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vexsnippet"             baseparm             label   "Snippet"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }         parm {             name    "vex_exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }         parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }     }      parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "id"         label   "Id"         type    integer         invisible         default { "-1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "uv"         label   "UV"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "parm_seed"         label   "Seed"         type    float         default { "55.11" }         range   { -10000 10000 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "affected_percentage"         label   "Affected Percentage"         type    float         default { "0" }         range   { 0 100 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "brightness_distribution"         label   "brightness_distribution"         type    ramp_flt         default { "2" }         range   { 1! 10 }         parmtag { "parmvop" "1" }         parmtag { "rampbasis_var" "brightness_distribution_the_basis_strings" }         parmtag { "rampbasisdefault" "monotonecubic" }         parmtag { "rampfloatdefault" "1pos ( 0 ) 1value ( 0 ) 1interp ( linear ) 2pos ( 1 ) 2value ( 1 ) 2interp ( linear )" }         parmtag { "rampkeys_var" "brightness_distribution_the_key_positions" }         parmtag { "rampshowcontrolsdefault" "1" }         parmtag { "rampvalues_var" "brightness_distribution_the_key_values" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "saturation_distribution"         label   "saturation_distribution"         type    ramp_flt         default { "2" }         range   { 1! 10 }         parmtag { "parmvop" "1" }         parmtag { "rampbasis_var" "saturation_distribution_the_basis_strings" }         parmtag { "rampbasisdefault" "monotonecubic" }         parmtag { "rampfloatdefault" "1pos ( 0 ) 1value ( 0 ) 1interp ( linear ) 2pos ( 1 ) 2value ( 1 ) 2interp ( linear )" }         parmtag { "rampkeys_var" "saturation_distribution_the_key_positions" }         parmtag { "rampshowcontrolsdefault" "1" }         parmtag { "rampvalues_var" "saturation_distribution_the_key_values" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "hue_quantization"         label   "hue_quantization"         type    float         default { "0.2" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "hue_shit"         label   "hue_shit"         type    float         default { "0" }         range   { -1 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     } ' $_obj_crowd_setup_random_shirt_color_earth_tones
+opparm $_obj_crowd_setup_random_shirt_color_earth_tones  bindings ( 0 ) groupbindings ( 0 ) brightness_distribution ( 2 ) saturation_distribution ( 2 )
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones bindclass ( primitive ) parm_seed ( -3197 ) affected_percentage ( 100 ) brightness_distribution1pos ( 0.36224490404129028 ) brightness_distribution1value ( 0.30000001192092896 ) brightness_distribution2pos ( 1 ) brightness_distribution2value ( 1 ) saturation_distribution1pos ( 0.49144485592842102 ) saturation_distribution1value ( 0.37900000810623169 ) saturation_distribution2pos ( 1 ) saturation_distribution2value ( 1 ) hue_shit ( 0.029999999999999999 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_crowd_setup_random_shirt_color_earth_tones
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones
+opcf $_obj_crowd_setup_random_shirt_color_earth_tones
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_crowd_setup_random_shirt_color_earth_tones_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + -6.3870800000000001` -y `$arg3 + 0.78349999999999997` $_obj_crowd_setup_random_shirt_color_earth_tones_geometryvopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_geometryvopglobal1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_geometryvopglobal1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_crowd_setup_random_shirt_color_earth_tones_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 69.733199999999997` -y `$arg3 + 2.6882999999999999` $_obj_crowd_setup_random_shirt_color_earth_tones_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_geometryvopoutput1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_geometryvopoutput1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_bind1 (Vop/bind)
+set _obj_crowd_setup_random_shirt_color_earth_tones_bind1 = `run("opadd -e -n -v bind bind1")`
+oplocate -x `$arg2 + -1.18638` -y `$arg3 + -0.98150000000000004` $_obj_crowd_setup_random_shirt_color_earth_tones_bind1
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones_bind1 parmname ( agent_id ) parmtype ( int ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_bind1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_bind1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_bind1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_add1 (Vop/add)
+set _obj_crowd_setup_random_shirt_color_earth_tones_add1 = `run("opadd -e -n -v add add1")`
+oplocate -x `$arg2 + 3.3499300000000001` -y `$arg3 + 0.44973999999999997` $_obj_crowd_setup_random_shirt_color_earth_tones_add1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_add1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_add1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_add1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_const1 (Vop/constant)
+set _obj_crowd_setup_random_shirt_color_earth_tones_const1 = `run("opadd -e -n -v constant const1")`
+oplocate -x `$arg2 + -1.4152400000000001` -y `$arg3 + 1.12974` $_obj_crowd_setup_random_shirt_color_earth_tones_const1
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones_const1 floatdef ( 442.10000000000002 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_const1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_const1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_const1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_random1 (Vop/random)
+set _obj_crowd_setup_random_shirt_color_earth_tones_random1 = `run("opadd -e -n -v random random1")`
+oplocate -x `$arg2 + 12.1927` -y `$arg3 + 2.6234700000000002` $_obj_crowd_setup_random_shirt_color_earth_tones_random1
+opparm $_obj_crowd_setup_random_shirt_color_earth_tones_random1 signature ( ufc ) roundtoint ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_random1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_random1
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_random1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_parm1 (Vop/parameter)
+set _obj_crowd_setup_random_shirt_color_earth_tones_parm1 = `run("opadd -e -n -v parameter parm1")`
+oplocate -x `$arg2 + -0.38514300000000001` -y `$arg3 + -4.7959300000000002` $_obj_crowd_setup_random_shirt_color_earth_tones_parm1
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones_parm1 parmname ( parm_seed ) parmlabel ( Seed ) floatdef ( 55.109999999999999 ) rangeflt ( -10000 10000 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_parm1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_parm1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_parm1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_parm2 (Vop/parameter)
+set _obj_crowd_setup_random_shirt_color_earth_tones_parm2 = `run("opadd -e -n -v parameter parm2")`
+oplocate -x `$arg2 + 11.991300000000001` -y `$arg3 + -5.4105400000000001` $_obj_crowd_setup_random_shirt_color_earth_tones_parm2
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones_parm2 parmname ( affected_percentage ) parmlabel ( 'Affected Percentage' ) rangeflt ( 0 100 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_parm2
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_parm2
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_parm2
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_random2 (Vop/random)
+set _obj_crowd_setup_random_shirt_color_earth_tones_random2 = `run("opadd -e -n -v random random2")`
+oplocate -x `$arg2 + 9.3499300000000005` -y `$arg3 + -2.1303100000000001` $_obj_crowd_setup_random_shirt_color_earth_tones_random2
+opparm $_obj_crowd_setup_random_shirt_color_earth_tones_random2 roundtoint ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_random2
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_random2
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_random2
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_addconst1 (Vop/addconst)
+set _obj_crowd_setup_random_shirt_color_earth_tones_addconst1 = `run("opadd -e -n -v addconst addconst1")`
+oplocate -x `$arg2 + 6.3499299999999996` -y `$arg3 + -1.1332800000000001` $_obj_crowd_setup_random_shirt_color_earth_tones_addconst1
+opparm $_obj_crowd_setup_random_shirt_color_earth_tones_addconst1 signature ( f ) addconst ( 55.198999999999998 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_addconst1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_addconst1
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_addconst1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_compare1 (Vop/compare)
+set _obj_crowd_setup_random_shirt_color_earth_tones_compare1 = `run("opadd -e -n -v compare compare1")`
+oplocate -x `$arg2 + 23.642800000000001` -y `$arg3 + -1.81603` $_obj_crowd_setup_random_shirt_color_earth_tones_compare1
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones_compare1 cmp ( lte )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_compare1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_compare1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_compare1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_mulconst1 (Vop/mulconst)
+set _obj_crowd_setup_random_shirt_color_earth_tones_mulconst1 = `run("opadd -e -n -v mulconst mulconst1")`
+oplocate -x `$arg2 + 12.3499` -y `$arg3 + -2.8103099999999999` $_obj_crowd_setup_random_shirt_color_earth_tones_mulconst1
+opparm $_obj_crowd_setup_random_shirt_color_earth_tones_mulconst1 mulconst ( 99.999999000000003 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_mulconst1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_mulconst1
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_mulconst1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_bind2 (Vop/bind)
+set _obj_crowd_setup_random_shirt_color_earth_tones_bind2 = `run("opadd -e -n -v bind bind2")`
+oplocate -x `$arg2 + 63.401000000000003` -y `$arg3 + 4.64154` $_obj_crowd_setup_random_shirt_color_earth_tones_bind2
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones_bind2 parmname ( shirt_color ) parmtype ( float3 ) useasparmdefiner ( on ) exportparm ( whenconnected ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_bind2
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_bind2
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_bind2
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_bind3 (Vop/bind)
+set _obj_crowd_setup_random_shirt_color_earth_tones_bind3 = `run("opadd -e -n -v bind bind3")`
+oplocate -x `$arg2 + 47.588200000000001` -y `$arg3 + 5.0794300000000003` $_obj_crowd_setup_random_shirt_color_earth_tones_bind3
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones_bind3 parmname ( shirt_color ) parmtype ( float3 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_bind3
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_bind3
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_bind3
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_switch1 (Vop/switch)
+set _obj_crowd_setup_random_shirt_color_earth_tones_switch1 = `run("opadd -e -n -v switch switch1")`
+oplocate -x `$arg2 + 51.598500000000001` -y `$arg3 + 5.2294299999999998` $_obj_crowd_setup_random_shirt_color_earth_tones_switch1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_switch1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_switch1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_switch1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_const2 (Vop/constant)
+set _obj_crowd_setup_random_shirt_color_earth_tones_const2 = `run("opadd -e -n -v constant const2")`
+oplocate -x `$arg2 + 47.717700000000001` -y `$arg3 + 7.0082700000000004` $_obj_crowd_setup_random_shirt_color_earth_tones_const2
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones_const2 consttype ( float3 ) float3def ( 1 1 1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_const2
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_const2
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_const2
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_switch2 (Vop/switch)
+set _obj_crowd_setup_random_shirt_color_earth_tones_switch2 = `run("opadd -e -n -v switch switch2")`
+oplocate -x `$arg2 + 58.755200000000002` -y `$arg3 + 4.7915400000000004` $_obj_crowd_setup_random_shirt_color_earth_tones_switch2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_switch2
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_switch2
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_switch2
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_compare2 (Vop/compare)
+set _obj_crowd_setup_random_shirt_color_earth_tones_compare2 = `run("opadd -e -n -v compare compare2")`
+oplocate -x `$arg2 + 26.160499999999999` -y `$arg3 + -3.3877299999999999` $_obj_crowd_setup_random_shirt_color_earth_tones_compare2
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones_compare2 cmp ( gte ) input2 ( 9.9999999999999995e-07 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_compare2
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_compare2
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_compare2
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_multiply1 (Vop/multiply)
+set _obj_crowd_setup_random_shirt_color_earth_tones_multiply1 = `run("opadd -e -n -v multiply multiply1")`
+oplocate -x `$arg2 + 53.643300000000004` -y `$arg3 + 1.91706` $_obj_crowd_setup_random_shirt_color_earth_tones_multiply1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_multiply1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_multiply1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_multiply1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_addconst2 (Vop/addconst)
+set _obj_crowd_setup_random_shirt_color_earth_tones_addconst2 = `run("opadd -e -n -v addconst addconst2")`
+oplocate -x `$arg2 + 9.8412299999999995` -y `$arg3 + 0.44973999999999997` $_obj_crowd_setup_random_shirt_color_earth_tones_addconst2
+opparm $_obj_crowd_setup_random_shirt_color_earth_tones_addconst2 signature ( f ) addconst ( 99.659999999999997 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_addconst2
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_addconst2
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_addconst2
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_ramp1 (Vop/rampparm)
+set _obj_crowd_setup_random_shirt_color_earth_tones_ramp1 = `run("opadd -e -n -v rampparm ramp1")`
+oplocate -x `$arg2 + 19.3111` -y `$arg3 + 8.2309400000000004` $_obj_crowd_setup_random_shirt_color_earth_tones_ramp1
+opparm $_obj_crowd_setup_random_shirt_color_earth_tones_ramp1  rampcolordefault ( 2 ) rampfloatdefault ( 2 )
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones_ramp1 parmname ( brightness_distribution ) ramptype ( flt ) rampbasisdefault ( monotonecubic ) rampcolordefault2pos ( 1 ) rampcolordefault2c ( 1 1 1 ) rampfloatdefault2pos ( 1 ) rampfloatdefault2value ( 1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_ramp1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_ramp1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_ramp1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_rgbtohsv1 (Vop/rgbtohsv)
+set _obj_crowd_setup_random_shirt_color_earth_tones_rgbtohsv1 = `run("opadd -e -n -v rgbtohsv rgbtohsv1")`
+oplocate -x `$arg2 + 15.1927` -y `$arg3 + 2.6234700000000002` $_obj_crowd_setup_random_shirt_color_earth_tones_rgbtohsv1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_rgbtohsv1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_rgbtohsv1
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_rgbtohsv1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_hsvtorgb1 (Vop/hsvtorgb)
+set _obj_crowd_setup_random_shirt_color_earth_tones_hsvtorgb1 = `run("opadd -e -n -v hsvtorgb hsvtorgb1")`
+oplocate -x `$arg2 + 47.275300000000001` -y `$arg3 + 2.8308` $_obj_crowd_setup_random_shirt_color_earth_tones_hsvtorgb1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_hsvtorgb1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_hsvtorgb1
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_hsvtorgb1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat1 (Vop/vectofloat)
+set _obj_crowd_setup_random_shirt_color_earth_tones_vectofloat1 = `run("opadd -e -n -v vectofloat vectofloat1")`
+oplocate -x `$arg2 + 18.2712` -y `$arg3 + 2.6234700000000002` $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat1
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec1 (Vop/floattovec)
+set _obj_crowd_setup_random_shirt_color_earth_tones_floattovec1 = `run("opadd -e -n -v floattovec floattovec1")`
+oplocate -x `$arg2 + 27.184200000000001` -y `$arg3 + 2.6234700000000002` $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec1
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_random3 (Vop/random)
+set _obj_crowd_setup_random_shirt_color_earth_tones_random3 = `run("opadd -e -n -v random random3")`
+oplocate -x `$arg2 + 16.2133` -y `$arg3 + 9.47607` $_obj_crowd_setup_random_shirt_color_earth_tones_random3
+opparm $_obj_crowd_setup_random_shirt_color_earth_tones_random3 signature ( ufc ) roundtoint ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_random3
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_random3
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_random3
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_addconst3 (Vop/addconst)
+set _obj_crowd_setup_random_shirt_color_earth_tones_addconst3 = `run("opadd -e -n -v addconst addconst3")`
+oplocate -x `$arg2 + 13.8619` -y `$arg3 + 7.3023400000000001` $_obj_crowd_setup_random_shirt_color_earth_tones_addconst3
+opparm $_obj_crowd_setup_random_shirt_color_earth_tones_addconst3 signature ( f ) addconst ( 5.6600000000000001 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_addconst3
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_addconst3
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_addconst3
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_ramp2 (Vop/rampparm)
+set _obj_crowd_setup_random_shirt_color_earth_tones_ramp2 = `run("opadd -e -n -v rampparm ramp2")`
+oplocate -x `$arg2 + 21.400500000000001` -y `$arg3 + 13.282999999999999` $_obj_crowd_setup_random_shirt_color_earth_tones_ramp2
+opparm $_obj_crowd_setup_random_shirt_color_earth_tones_ramp2  rampcolordefault ( 2 ) rampfloatdefault ( 2 )
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones_ramp2 parmname ( saturation_distribution ) ramptype ( flt ) rampbasisdefault ( monotonecubic ) rampcolordefault2pos ( 1 ) rampcolordefault2c ( 1 1 1 ) rampfloatdefault2pos ( 1 ) rampfloatdefault2value ( 1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_ramp2
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_ramp2
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_ramp2
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_random4 (Vop/random)
+set _obj_crowd_setup_random_shirt_color_earth_tones_random4 = `run("opadd -e -n -v random random4")`
+oplocate -x `$arg2 + 18.302700000000002` -y `$arg3 + 14.5281` $_obj_crowd_setup_random_shirt_color_earth_tones_random4
+opparm $_obj_crowd_setup_random_shirt_color_earth_tones_random4 signature ( ufc ) roundtoint ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_random4
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_random4
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_random4
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_addconst4 (Vop/addconst)
+set _obj_crowd_setup_random_shirt_color_earth_tones_addconst4 = `run("opadd -e -n -v addconst addconst4")`
+oplocate -x `$arg2 + 15.9513` -y `$arg3 + 12.3544` $_obj_crowd_setup_random_shirt_color_earth_tones_addconst4
+opparm $_obj_crowd_setup_random_shirt_color_earth_tones_addconst4 signature ( f ) addconst ( 51.659999999999997 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_addconst4
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_addconst4
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_addconst4
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_multiply2 (Vop/multiply)
+set _obj_crowd_setup_random_shirt_color_earth_tones_multiply2 = `run("opadd -e -n -v multiply multiply2")`
+oplocate -x `$arg2 + 24.443000000000001` -y `$arg3 + 7.3023400000000001` $_obj_crowd_setup_random_shirt_color_earth_tones_multiply2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_multiply2
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_multiply2
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_multiply2
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat2 (Vop/vectofloat)
+set _obj_crowd_setup_random_shirt_color_earth_tones_vectofloat2 = `run("opadd -e -n -v vectofloat vectofloat2")`
+oplocate -x `$arg2 + 30.939599999999999` -y `$arg3 + 6.8009399999999998` $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat2
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat2
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat2
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec2 (Vop/floattovec)
+set _obj_crowd_setup_random_shirt_color_earth_tones_floattovec2 = `run("opadd -e -n -v floattovec floattovec2")`
+oplocate -x `$arg2 + 43.7819` -y `$arg3 + 6.6294000000000004` $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec2
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec2
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec2
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_parm3 (Vop/parameter)
+set _obj_crowd_setup_random_shirt_color_earth_tones_parm3 = `run("opadd -e -n -v parameter parm3")`
+oplocate -x `$arg2 + 35.761099999999999` -y `$arg3 + 11.510300000000001` $_obj_crowd_setup_random_shirt_color_earth_tones_parm3
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones_parm3 parmname ( hue_quantization ) floatdef ( 0.20000000000000001 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_parm3
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_parm3
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_parm3
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_modulo1 (Vop/modulo)
+set _obj_crowd_setup_random_shirt_color_earth_tones_modulo1 = `run("opadd -e -n -v modulo modulo1")`
+oplocate -x `$arg2 + 37.055700000000002` -y `$arg3 + 7.9476199999999997` $_obj_crowd_setup_random_shirt_color_earth_tones_modulo1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_modulo1
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_modulo1
+opuserdata -n '___Version___' -v '' $_obj_crowd_setup_random_shirt_color_earth_tones_modulo1
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_parm4 (Vop/parameter)
+set _obj_crowd_setup_random_shirt_color_earth_tones_parm4 = `run("opadd -e -n -v parameter parm4")`
+oplocate -x `$arg2 + 38.123800000000003` -y `$arg3 + 12.340299999999999` $_obj_crowd_setup_random_shirt_color_earth_tones_parm4
+opparm -V 19.5.368 $_obj_crowd_setup_random_shirt_color_earth_tones_parm4 parmname ( hue_shit ) rangeflt ( -1 1 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_parm4
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_parm4
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_parm4
+
+# Node $_obj_crowd_setup_random_shirt_color_earth_tones_add2 (Vop/add)
+set _obj_crowd_setup_random_shirt_color_earth_tones_add2 = `run("opadd -e -n -v add add2")`
+oplocate -x `$arg2 + 40.7697` -y `$arg3 + 7.9476199999999997` $_obj_crowd_setup_random_shirt_color_earth_tones_add2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_crowd_setup_random_shirt_color_earth_tones_add2
+opexprlanguage -s hscript $_obj_crowd_setup_random_shirt_color_earth_tones_add2
+opuserdata -n '___Version___' -v '19.5.368' $_obj_crowd_setup_random_shirt_color_earth_tones_add2
+opcf ..
+opcf $_obj_crowd_setup_random_shirt_color_earth_tones
+oporder -e geometryvopglobal1 geometryvopoutput1 bind1 add1 const1 random1 parm1 parm2 random2 addconst1 compare1 mulconst1 bind2 bind3 switch1 const2 switch2 compare2 multiply1 addconst2 ramp1 rgbtohsv1 hsvtorgb1 vectofloat1 floattovec1 random3 addconst3 ramp2 random4 addconst4 multiply2 vectofloat2 floattovec2 parm3 modulo1 parm4 add2 
+opcf ..
+opset -p on $_obj_crowd_setup_random_shirt_color_earth_tones
+
+opcf $arg1
+opwire -n $_obj_crowd_setup_crowd_mode_switch -0 $_obj_crowd_setup_random_shirt_color_earth_tones
+opcf $_obj_crowd_setup_random_shirt_color_earth_tones
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_bind2 -3 $_obj_crowd_setup_random_shirt_color_earth_tones_geometryvopoutput1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_const1 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_add1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_parm1 -1 $_obj_crowd_setup_random_shirt_color_earth_tones_add1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_bind1 -2 $_obj_crowd_setup_random_shirt_color_earth_tones_add1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_addconst2 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_random1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_addconst1 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_random2
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_add1 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_addconst1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_mulconst1 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_compare1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_parm2 -1 $_obj_crowd_setup_random_shirt_color_earth_tones_compare1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_random2 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_mulconst1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_switch2 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_bind2
+opwire -n -o 1 $_obj_crowd_setup_random_shirt_color_earth_tones_bind3 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_switch1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_const2 -1 $_obj_crowd_setup_random_shirt_color_earth_tones_switch1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_bind3 -2 $_obj_crowd_setup_random_shirt_color_earth_tones_switch1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_multiply1 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_switch2
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_switch1 -1 $_obj_crowd_setup_random_shirt_color_earth_tones_switch2
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_hsvtorgb1 -2 $_obj_crowd_setup_random_shirt_color_earth_tones_switch2
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_parm2 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_compare2
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_compare1 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_multiply1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_compare2 -1 $_obj_crowd_setup_random_shirt_color_earth_tones_multiply1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_addconst1 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_addconst2
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_random3 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_ramp1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_random1 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_rgbtohsv1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec2 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_hsvtorgb1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_rgbtohsv1 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat1 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_multiply2 -1 $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_ramp1 -2 $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_addconst3 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_random3
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_addconst2 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_addconst3
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_random4 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_ramp2
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_addconst4 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_random4
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_addconst2 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_addconst4
+opwire -n -o 1 $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat1 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_multiply2
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_ramp2 -1 $_obj_crowd_setup_random_shirt_color_earth_tones_multiply2
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec1 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat2
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_add2 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec2
+opwire -n -o 1 $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat2 -1 $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec2
+opwire -n -o 2 $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat2 -2 $_obj_crowd_setup_random_shirt_color_earth_tones_floattovec2
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_vectofloat2 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_modulo1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_parm3 -1 $_obj_crowd_setup_random_shirt_color_earth_tones_modulo1
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_modulo1 -0 $_obj_crowd_setup_random_shirt_color_earth_tones_add2
+opwire -n $_obj_crowd_setup_random_shirt_color_earth_tones_parm4 -1 $_obj_crowd_setup_random_shirt_color_earth_tones_add2
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_crowd_setup_random_shirt_color_earth_tones
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_crowd_setup_random_shirt_color_earth_tones
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

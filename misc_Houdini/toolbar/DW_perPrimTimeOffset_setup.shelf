@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="DW_perPrimTimeOffset" label="DW Per-prim Time Offset" icon="SOP_retime">
+    <toolMenuContext name="network">
+      <contextOpType>Sop/testgeometry_crag</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'foreach' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_geo1_testgeometry_crag1 (Sop/testgeometry_crag)
+set _obj_geo1_testgeometry_crag1 = `run("opadd -e -n -v testgeometry_crag testgeometry_crag1")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_geo1_testgeometry_crag1
+chblockbegin
+chadd -t 41.666666666666664 41.666666666666664 $_obj_geo1_testgeometry_crag1 frame
+chkey -t 41.666666666666664 -v 1 -m 0 -a 0 -A 0 -T a  -F '$FF-1000' $_obj_geo1_testgeometry_crag1/frame
+chblockend
+opparm $_obj_geo1_testgeometry_crag1 frame ( frame )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_testgeometry_crag1
+opexprlanguage -s hscript $_obj_geo1_testgeometry_crag1
+opuserdata -n '___Version___' -v '' $_obj_geo1_testgeometry_crag1
+opuserdata -n '___toolcount___' -v '1' $_obj_geo1_testgeometry_crag1
+opuserdata -n '___toolid___' -v 'sop_testgeometry_crag' $_obj_geo1_testgeometry_crag1
+opset -p on $_obj_geo1_testgeometry_crag1
+opcf $arg1
+
+# Node $_obj_geo1_set_frame_offset_attribute1 (Sop/attribwrangle)
+set _obj_geo1_set_frame_offset_attribute1 = `run("opadd -e -n -v attribwrangle set_frame_offset_attribute1")`
+oplocate -x `$arg2 + 0.59560000000000102` -y `$arg3 + -4.4682820000000003` $_obj_geo1_set_frame_offset_attribute1
+opspareds '    parm {         name    "frames_per_instance"         label   "Frames Per Instance"         type    float         default { "0" }         range   { 0 100 }     }     group {         name    "folder1"         label   "Code"          parm {             name    "group"             baseparm             label   "Group"             export  none             bindselector points "Modify Points"                 "Select the points to affect and press Enter to complete."                 0 1 0xffffffff 0 grouptype 0         }         parm {             name    "grouptype"             baseparm             label   "Group Type"             export  none         }         parm {             name    "class"             baseparm             label   "Run Over"             export  none         }         parm {             name    "vex_numcount"             baseparm             label   "Number Count"             export  none         }         parm {             name    "vex_threadjobsize"             baseparm             label   "Thread Job Size"             export  none         }         parm {             name    "snippet"             baseparm             label   "VEXpression"             export  all         }         parm {             name    "exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }     }      group {         name    "folder1_1"         label   "Bindings"          parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }         parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }     }  ' $_obj_geo1_set_frame_offset_attribute1
+opparm $_obj_geo1_set_frame_offset_attribute1  bindings ( 0 ) groupbindings ( 0 )
+opparm $_obj_geo1_set_frame_offset_attribute1 class ( primitive ) snippet ( 'f@frame_offset = chf("frames_per_instance") * i@copynum;' ) frames_per_instance ( 20 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_set_frame_offset_attribute1
+opexprlanguage -s hscript $_obj_geo1_set_frame_offset_attribute1
+opuserdata -n '___Version___' -v '' $_obj_geo1_set_frame_offset_attribute1
+opuserdata -n '___toolcount___' -v '10' $_obj_geo1_set_frame_offset_attribute1
+opuserdata -n '___toolid___' -v 'DW_perPrimTimeOffset' $_obj_geo1_set_frame_offset_attribute1
+opset -p on $_obj_geo1_set_frame_offset_attribute1
+opcf $arg1
+
+# Node $_obj_geo1_copy2 (Sop/copyxform)
+set _obj_geo1_copy2 = `run("opadd -e -n -v copyxform copy2")`
+oplocate -x `$arg2 + 0` -y `$arg3 + -2.0000019999999998` $_obj_geo1_copy2
+opparm -V 19.5.368 $_obj_geo1_copy2 ncy ( 8 ) t ( 2 0 0 ) docopyattrib ( on )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_copy2
+opexprlanguage -s hscript $_obj_geo1_copy2
+opuserdata -n '___Version___' -v '19.5.303' $_obj_geo1_copy2
+opuserdata -n '___toolcount___' -v '10' $_obj_geo1_copy2
+opuserdata -n '___toolid___' -v 'DW_perPrimTimeOffset' $_obj_geo1_copy2
+opset -p on $_obj_geo1_copy2
+opcf $arg1
+
+# Node $_obj_geo1_foreach3 (Sop/foreach)
+set _obj_geo1_foreach3 = `run("opadd -e -n -v foreach foreach3")`
+oplocate -x `$arg2 + 0.59860000000000113` -y `$arg3 + -8.2479219999999991` $_obj_geo1_foreach3
+opparm -V 19.5.368 $_obj_geo1_foreach3 fortype ( attrib ) attrib ( frame_offset )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_foreach3
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_foreach3
+opexprlanguage -s hscript $_obj_geo1_foreach3
+opuserdata -n '___Version___' -v '19.5.303' $_obj_geo1_foreach3
+opuserdata -n '___toolcount___' -v '10' $_obj_geo1_foreach3
+opuserdata -n '___toolid___' -v 'DW_perPrimTimeOffset' $_obj_geo1_foreach3
+opcf $_obj_geo1_foreach3
+
+# Node $_obj_geo1_foreach3_each1 (Sop/each)
+set _obj_geo1_foreach3_each1 = `run("opadd -e -n -v each each1")`
+oplocate -x `$arg2 + 1.6953` -y `$arg3 + 1.6941200000000001` $_obj_geo1_foreach3_each1
+chblockbegin
+chadd -t 0 0 $_obj_geo1_foreach3_each1 feedback
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '!ch("../mergeresults")' $_obj_geo1_foreach3_each1/feedback
+chadd -t 0 0 $_obj_geo1_foreach3_each1 group
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ifs(ch("feedback") || (strcmp(chs("../fortype"), "group") && strcmp(chs("../fortype"), "prim")), "", stamps("..", chs("../forstamp"), ""))' $_obj_geo1_foreach3_each1/group
+chadd -t 0 0 $_obj_geo1_foreach3_each1 attrib
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ifs(ch("feedback") || strcmp(chs("../fortype"), "attrib"), "", chs("../attrib"))' $_obj_geo1_foreach3_each1/attrib
+chadd -t 0 0 $_obj_geo1_foreach3_each1 attribval1
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'stamp("..", chs("../forstamp") + "1", 0)' $_obj_geo1_foreach3_each1/attribval1
+chadd -t 0 0 $_obj_geo1_foreach3_each1 attribval2
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'stamp("..", chs("../forstamp") + "2", 0)' $_obj_geo1_foreach3_each1/attribval2
+chadd -t 0 0 $_obj_geo1_foreach3_each1 attribval3
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'stamp("..", chs("../forstamp") + "3", 0)' $_obj_geo1_foreach3_each1/attribval3
+chadd -t 0 0 $_obj_geo1_foreach3_each1 attribtol
+chkey -t 0 -v 0.001 -m 0 -a 0 -A 0 -T a  -F 'ch("../attribtol")' $_obj_geo1_foreach3_each1/attribtol
+chadd -t 0 0 $_obj_geo1_foreach3_each1 eachpoint
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../eachpoint")' $_obj_geo1_foreach3_each1/eachpoint
+chblockend
+opparm -V 19.5.368 $_obj_geo1_foreach3_each1 feedback ( feedback ) forpath ( .. ) group ( group ) attrib ( attrib ) attribval ( attribval1 attribval2 attribval3 ) attribtol ( attribtol ) eachpoint ( eachpoint )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_foreach3_each1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_foreach3_each1
+opexprlanguage -s hscript $_obj_geo1_foreach3_each1
+opuserdata -n '___Version___' -v '19.5.303' $_obj_geo1_foreach3_each1
+opuserdata -n '___toolcount___' -v '10' $_obj_geo1_foreach3_each1
+opuserdata -n '___toolid___' -v 'DW_perPrimTimeOffset' $_obj_geo1_foreach3_each1
+
+# Node $_obj_geo1_foreach3_OUT (Sop/null)
+set _obj_geo1_foreach3_OUT = `run("opadd -e -n -v null OUT")`
+oplocate -x `$arg2 + 1.6953` -y `$arg3 + -1.5101899999999999` $_obj_geo1_foreach3_OUT
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_foreach3_OUT
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_foreach3_OUT
+opexprlanguage -s hscript $_obj_geo1_foreach3_OUT
+opuserdata -n '___Version___' -v '19.5.303' $_obj_geo1_foreach3_OUT
+opuserdata -n '___toolcount___' -v '10' $_obj_geo1_foreach3_OUT
+opuserdata -n '___toolid___' -v 'DW_perPrimTimeOffset' $_obj_geo1_foreach3_OUT
+
+# Node $_obj_geo1_foreach3_timeshift2 (Sop/timeshift)
+set _obj_geo1_foreach3_timeshift2 = `run("opadd -e -n -v timeshift timeshift2")`
+oplocate -x `$arg2 + 1.6953` -y `$arg3 + 0.016776599999999999` $_obj_geo1_foreach3_timeshift2
+chblockbegin
+chadd -t 0 0 $_obj_geo1_foreach3_timeshift2 frame
+chkey -t 0 -v 76 -m 0 -a 0 -A 0 -T a  -F '$FF + stamp("..", "FORVALUE", 0)' $_obj_geo1_foreach3_timeshift2/frame
+chadd -t 0 0 $_obj_geo1_foreach3_timeshift2 time
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$T' $_obj_geo1_foreach3_timeshift2/time
+chadd -t 0 0 $_obj_geo1_foreach3_timeshift2 frange1
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FSTART' $_obj_geo1_foreach3_timeshift2/frange1
+chadd -t 0 0 $_obj_geo1_foreach3_timeshift2 frange2
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FEND' $_obj_geo1_foreach3_timeshift2/frange2
+chadd -t 0 0 $_obj_geo1_foreach3_timeshift2 trange1
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$TSTART' $_obj_geo1_foreach3_timeshift2/trange1
+chadd -t 0 0 $_obj_geo1_foreach3_timeshift2 trange2
+chkey -t 0 -v 0 -m 0 -a 0 -A 0 -T a  -F '$TEND' $_obj_geo1_foreach3_timeshift2/trange2
+chblockend
+opparm -V 19.5.368 $_obj_geo1_foreach3_timeshift2 frame ( frame ) integerframe ( off )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_geo1_foreach3_timeshift2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_foreach3_timeshift2
+opexprlanguage -s hscript $_obj_geo1_foreach3_timeshift2
+opuserdata -n '___Version___' -v '19.5.303' $_obj_geo1_foreach3_timeshift2
+opuserdata -n '___toolcount___' -v '10' $_obj_geo1_foreach3_timeshift2
+opuserdata -n '___toolid___' -v 'DW_perPrimTimeOffset' $_obj_geo1_foreach3_timeshift2
+oporder -e each1 OUT timeshift2 
+opcf ..
+opset -p on $_obj_geo1_foreach3
+
+opcf $arg1
+opcf $arg1
+opwire -n $_obj_geo1_copy2 -0 $_obj_geo1_set_frame_offset_attribute1
+opcf $arg1
+opwire -n $_obj_geo1_testgeometry_crag1 -0 $_obj_geo1_copy2
+opcf $arg1
+opwire -n $_obj_geo1_set_frame_offset_attribute1 -0 $_obj_geo1_foreach3
+opcf $_obj_geo1_foreach3
+opwire -n -i 0 -0 $_obj_geo1_foreach3_each1
+opwire -n $_obj_geo1_foreach3_timeshift2 -0 $_obj_geo1_foreach3_OUT
+opwire -n $_obj_geo1_foreach3_each1 -0 $_obj_geo1_foreach3_timeshift2
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_geo1_foreach3
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_geo1_testgeometry_crag1
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

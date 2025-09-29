@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="randomized_pointreplicate" label="Randomized Pointreplicate" icon="SOP_pointreplicate">
+    <helpURL>operator:Sop/subnet</helpURL>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/subnet</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'subnet' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_plasma_randomized_pointreplicate1 (Sop/subnet)
+set _obj_plasma_randomized_pointreplicate1 = `run("opadd -e -n -v subnet randomized_pointreplicate1")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_plasma_randomized_pointreplicate1
+opspareds '    parm {         name    "label1"         baseparm         label   "Input #1 Label"         invisible         export  all     }     parm {         name    "label2"         baseparm         label   "Input #2 Label"         invisible         export  all     }     parm {         name    "label3"         baseparm         label   "Input #3 Label"         invisible         export  all     }     parm {         name    "label4"         baseparm         label   "Input #4 Label"         invisible         export  all     }     parm {         name    "group"         label   "Group"         type    string         default { "" }         menutoggle {             [ "opmenu -l -a pointreplicate group" ]         }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "script_action" "import soputils\\nkwargs[\'geometrytype\'] = hou.geometryType.Points\\nkwargs[\'inputindex\'] = 0\\nsoputils.selectGroupParm(kwargs)" }         parmtag { "script_action_help" "Select geometry from an available viewport." }         parmtag { "script_action_icon" "BUTTONS_reselect" }     }     parm {         name    "keepgeo"         label   "Keep Input Geometry"         type    toggle         default { "off" }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "script_callback_language" "python" }     }     group {         name    "folder1"         label   "Quantity"         grouptag { "visibletabs" "1111" }          parm {             name    "min_points"             label   "Min Points"             type    integer             default { "0" }             range   { 0 50 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "max_points"             label   "Max Points"             type    integer             default { "10" }             range   { 0 100 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "seed"             label   "Seed"             type    float             default { "0.455" }             range   { -1000 1000 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }     }      group {         name    "folder1_1"         label   "Shape"         grouptag { "visibletabs" "1111" }          parm {             name    "shape"             label   "Shape"             type    ordinal             default { "box" }             menu {                 "box"       "Box"                 "sphere"    "Sphere"                 "cylinder"  "Cylinder"                 "cone"      "Cone"                 "grid"      "Grid"                 "circle"    "Circle"                 "line"      "Line"                 "point"     "Point"                 "file"      "File"                 "sop"       "SOP"             }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "file"             label   "File"             type    geometry             default { "defgeo.bgeo" }             hidewhen "{ shape != file }"             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "sop"             label   "SOP"             type    oppath             default { "" }             hidewhen "{ shape != sop }"             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "oprelative" "." }         }         parm {             name    "orientation"             label   "Orientation"             type    ordinal             default { "xy" }             disablewhen "{ shape != grid shape != line shape != circle }"             menu {                 "xy"    "XY Plane"                 "yz"    "YZ Plane"                 "zx"    "ZX Plane"             }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "t"             label   "Center"             type    vector             size    3             default { "0" "0" "0" }             range   { -1 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "size"             label   "Size"             type    vector             size    3             default { "1" "1" "1" }             disablewhen "{ shape == point }"             range   { -1 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "scale"             label   "Uniform Scale"             type    float             default { "0" }             disablewhen "{ shape == point }"             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "velstretch"             label   "Velocity Stretch"             type    ordinal             default { "none" }             disablewhen "{ shape == point }"             menu {                 "none"      "None"                 "scaled"    "Scaled"                 "ignore"    "Ignore Geometry Scale"             }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "velscale"             label   "Velocity Scale"             type    float             default { "1" }             disablewhen "{ velstretch == none } { shape == point }"             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "seed2"             label   "Seed"             type    float             default { "2.4" }             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "qstrat"             label   "Quasi-Stratified Sampling"             type    toggle             default { "on" }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "sop" }         }     }      group {         name    "folder1_2"         label   "Noise"         grouptag { "visibletabs" "1111" }          parm {             name    "donoise"             label   "Add Noise"             type    toggle             default { "off" }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "type"             label   "Noise Type"             type    string             default { "xnoise" }             disablewhen "{ donoise == 0 }"             menu {                 "pnoise"        "Perlin Noise"                 "onoise"        "Original Perlin Noise"                 "snoise"        "Sparse Convolution Noise"                 "anoise"        "Alligator Noise"                 "xnoise"        "Simplex Noise"                 "correctnoise"  "Zero Centered Perlin Noise"             }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "sop" }         }         parm {             name    "freq"             label   "Frequency"             type    float             size    3             default { "1" "1" "1" }             disablewhen "{ donoise == 0 }"             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "sop" }         }         parm {             name    "offset"             label   "Offset"             type    float             size    3             default { "0" "0" "0" }             disablewhen "{ donoise == 0 }"             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "sop" }         }         parm {             name    "amp"             label   "Amplitude"             type    float             default { "1" }             disablewhen "{ donoise == 0 }"             range   { -1 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "sop" }         }         parm {             name    "rough"             label   "Roughness"             type    float             default { "0.5" }             disablewhen "{ donoise == 0 }"             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "sop" }         }         parm {             name    "atten"             label   "Attenuation"             type    float             default { "1" }             disablewhen "{ donoise == 0 }"             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "sop" }         }         parm {             name    "turb"             label   "Turbulence"             type    integer             default { "3" }             disablewhen "{ donoise == 0 }"             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "parmvop" "1" }             parmtag { "shaderparmcontexts" "sop" }         }     }      group {         name    "folder1_3"         label   "Attributes"         grouptag { "visibletabs" "1111" }          parm {             name    "docopyattribs"             label   "Copy Source Attributes"             type    toggle             default { "on" }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "attribstocopy"             label   "Attributes"             type    string             default { "*" }             disablewhen "{ docopyattribs == 0 }"             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "inheritvel"             label   "Inherit Velocity"             type    float             default { "1" }             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "radialvel"             label   "Radial Velocity"             type    float             default { "0" }             range   { 0 10 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "keepinternal"             label   "Keep Source Attributes"             type    toggle             default { "off" }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "sourceptattrib"             label   "Source Point Attribute"             type    string             default { "sourcept" }             hidewhen "{ keepinternal == 0 }"             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "sourceidxattrib"             label   "Source Index Attribute"             type    string             default { "sourceidx" }             hidewhen "{ keepinternal == 0 }"             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "newg"             label   "Create Output Group"             type    toggle             default { "off" }             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }         parm {             name    "outputgroup"             label   "Output Group"             type    string             default { "" }             disablewhen "{ newg == 0 }"             range   { 0 1 }             parmtag { "autoscope" "0000000000000000" }             parmtag { "script_callback_language" "python" }         }     }  ' $_obj_plasma_randomized_pointreplicate1
+opparm -V 19.5.368 $_obj_plasma_randomized_pointreplicate1 max_points ( 3 )
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_plasma_randomized_pointreplicate1
+opexprlanguage -s hscript $_obj_plasma_randomized_pointreplicate1
+opuserdata -n '___toolcount___' -v '326' $_obj_plasma_randomized_pointreplicate1
+opuserdata -n '___toolid___' -v 'randomized_pointreplicate' $_obj_plasma_randomized_pointreplicate1
+opcf $_obj_plasma_randomized_pointreplicate1
+
+# Node $_obj_plasma_randomized_pointreplicate1_pointreplicate (Sop/pointreplicate)
+set _obj_plasma_randomized_pointreplicate1_pointreplicate = `run("opadd -e -n -v pointreplicate pointreplicate")`
+oplocate -x `$arg2 + -0.32052941176470578` -y `$arg3 + 5.7343000000000046` $_obj_plasma_randomized_pointreplicate1_pointreplicate
+chblockbegin
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate group
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../group")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/group
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate keepgeo
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../keepgeo")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/keepgeo
+chadd -t 41.966666666666669 41.966666666666669 $_obj_plasma_randomized_pointreplicate1_pointreplicate nptsperpt
+chkey -t 41.966666666666669 -v 7 -m 0 -a 0 -A 0 -T a  -F 'ch("../set_generated_points_attribs/max_points")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/nptsperpt
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate shape
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../shape")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/shape
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate file
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../file")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/file
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate sop
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chsop("../sop")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/sop
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate orientation
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../orientation")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/orientation
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate tx
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../tx")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/tx
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate ty
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../ty")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/ty
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate tz
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../tz")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/tz
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate sizex
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../sizex")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/sizex
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate sizey
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../sizey")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/sizey
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate sizez
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../sizez")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/sizez
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate scale
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../scale")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/scale
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate velstretch
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../velstretch")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/velstretch
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate velscale
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../velscale")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/velscale
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate seed
+chkey -t 40 -v 2.3999999999999999 -m 0 -a 0 -A 0 -T a  -F 'ch("../seed2")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/seed
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate qstrat
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../qstrat")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/qstrat
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate donoise
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../donoise")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/donoise
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate type
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../type")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/type
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate freq1
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../freq1")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/freq1
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate freq2
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../freq2")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/freq2
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate freq3
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../freq3")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/freq3
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate offset1
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../offset1")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/offset1
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate offset2
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../offset2")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/offset2
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate offset3
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../offset3")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/offset3
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate amp
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../amp")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/amp
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate rough
+chkey -t 40 -v 0.5 -m 0 -a 0 -A 0 -T a  -F 'ch("../rough")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/rough
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate atten
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../atten")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/atten
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate turb
+chkey -t 40 -v 3 -m 0 -a 0 -A 0 -T a  -F 'ch("../turb")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/turb
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate docopyattribs
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../docopyattribs")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/docopyattribs
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate attribstocopy
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../attribstocopy")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/attribstocopy
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate inheritvel
+chkey -t 40 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../inheritvel")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/inheritvel
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate radialvel
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../radialvel")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/radialvel
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate keepinternal
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../keepinternal")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/keepinternal
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate sourceptattrib
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../sourceptattrib")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/sourceptattrib
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate sourceidxattrib
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../sourceidxattrib")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/sourceidxattrib
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate newg
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../newg")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/newg
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_pointreplicate outputgroup
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../outputgroup")' $_obj_plasma_randomized_pointreplicate1_pointreplicate/outputgroup
+chblockend
+opparm $_obj_plasma_randomized_pointreplicate1_pointreplicate group ( group ) keepgeo ( keepgeo ) nptsperpt ( nptsperpt ) genfromattrib ( on ) attrib ( _generate_factor ) shape ( shape ) file ( file ) sop ( sop ) orientation ( orientation ) t ( tx ty tz ) size ( sizex sizey sizez ) scale ( scale ) velstretch ( velstretch ) velscale ( velscale ) seed ( seed ) qstrat ( qstrat ) donoise ( donoise ) type ( type ) freq ( freq1 freq2 freq3 ) offset ( offset1 offset2 offset3 ) amp ( amp ) rough ( rough ) atten ( atten ) turb ( turb ) docopyattribs ( docopyattribs ) attribstocopy ( attribstocopy ) inheritvel ( inheritvel ) radialvel ( radialvel ) keepinternal ( keepinternal ) sourceptattrib ( sourceptattrib ) sourceidxattrib ( sourceidxattrib ) newg ( newg ) outputgroup ( outputgroup )
+opcolor -c 0.83899998664855957 0.83899998664855957 0.83899998664855957 $_obj_plasma_randomized_pointreplicate1_pointreplicate
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_plasma_randomized_pointreplicate1_pointreplicate
+opexprlanguage -s hscript $_obj_plasma_randomized_pointreplicate1_pointreplicate
+opuserdata -n '___Version___' -v '' $_obj_plasma_randomized_pointreplicate1_pointreplicate
+opuserdata -n '___toolcount___' -v '326' $_obj_plasma_randomized_pointreplicate1_pointreplicate
+opuserdata -n '___toolid___' -v 'randomized_pointreplicate' $_obj_plasma_randomized_pointreplicate1_pointreplicate
+opcf ..
+opcf $_obj_plasma_randomized_pointreplicate1
+
+# Node $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs (Sop/attribwrangle)
+set _obj_plasma_randomized_pointreplicate1_set_generated_points_attribs = `run("opadd -e -n -v attribwrangle set_generated_points_attribs")`
+oplocate -x `$arg2 + -0.44117647058823528` -y `$arg3 + 7.2745235411121563` $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs
+opspareds '    group {         name    "folder1"         label   "Code"          parm {             name    "group"             baseparm             label   "Group"             export  none             bindselector points "Modify Points"                 "Select the points to affect and press Enter to complete."                 0 1 0xffffffff 0 grouptype 0         }         parm {             name    "grouptype"             baseparm             label   "Group Type"             export  none         }         parm {             name    "class"             baseparm             label   "Run Over"             export  none         }         parm {             name    "vex_numcount"             baseparm             label   "Number Count"             export  none         }         parm {             name    "vex_threadjobsize"             baseparm             label   "Thread Job Size"             export  none         }         parm {             name    "snippet"             baseparm             label   "VEXpression"             export  all         }         parm {             name    "exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }     }      group {         name    "folder1_1"         label   "Bindings"          parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }     }      parm {         name    "seed"         label   "Seed"         type    float         default { "444.1" }         range   { -1000 1000 }     }     parm {         name    "min_points"         label   "Min Points"         type    integer         default { "0" }         range   { 0 50 }     }     parm {         name    "max_points"         label   "Max Points"         type    integer         default { "15" }         range   { 0 100 }     }     parm {         name    "vex_precision"         baseparm         label   "VEX Precision"         export  none     } ' $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs
+opparm $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs  bindings ( 0 ) groupbindings ( 0 )
+chblockbegin
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs seed
+chkey -t 40 -v 0.45500000000000002 -m 0 -a 0 -A 0 -T a  -F 'ch("../seed")' $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs/seed
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs min_points
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../min_points")' $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs/min_points
+chadd -t 40 40 $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs max_points
+chkey -t 40 -v 10 -m 0 -a 0 -A 0 -T a  -F 'ch("../max_points")' $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs/max_points
+chblockend
+opparm $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs snippet ( 'f@generated_points = fit01(rand(3.26 * (chf("seed") + i@ptnum)), chi("min_points"), chi("max_points"));\n\nf@_generate_factor = fit(f@generated_points, 0, chi("max_points"), 0, 1);\n' ) seed ( seed ) min_points ( min_points ) max_points ( max_points )
+opcolor -c 0.83899998664855957 0.83899998664855957 0.83899998664855957 $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs
+opexprlanguage -s hscript $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs
+opuserdata -n '___Version___' -v '' $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs
+opuserdata -n '___toolcount___' -v '326' $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs
+opuserdata -n '___toolid___' -v 'randomized_pointreplicate' $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs
+
+# Node $_obj_plasma_randomized_pointreplicate1_attribdelete1 (Sop/attribdelete)
+set _obj_plasma_randomized_pointreplicate1_attribdelete1 = `run("opadd -e -n -v attribdelete attribdelete1")`
+oplocate -x `$arg2 + 0.31404000000000032` -y `$arg3 + 4.3217000000000034` $_obj_plasma_randomized_pointreplicate1_attribdelete1
+opparm $_obj_plasma_randomized_pointreplicate1_attribdelete1 ptdel ( _generate_factor )
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_plasma_randomized_pointreplicate1_attribdelete1
+opexprlanguage -s hscript $_obj_plasma_randomized_pointreplicate1_attribdelete1
+opuserdata -n '___Version___' -v '' $_obj_plasma_randomized_pointreplicate1_attribdelete1
+opuserdata -n '___toolcount___' -v '326' $_obj_plasma_randomized_pointreplicate1_attribdelete1
+opuserdata -n '___toolid___' -v 'randomized_pointreplicate' $_obj_plasma_randomized_pointreplicate1_attribdelete1
+
+# Node $_obj_plasma_randomized_pointreplicate1_output0 (Sop/output)
+set _obj_plasma_randomized_pointreplicate1_output0 = `run("opadd -e -n -v output output0")`
+oplocate -x `$arg2 + 0.31404000000000032` -y `$arg3 + 3.427500000000002` $_obj_plasma_randomized_pointreplicate1_output0
+opparm -V 19.5.368 $_obj_plasma_randomized_pointreplicate1_output0 outputidx ( 0 )
+chlock $_obj_plasma_randomized_pointreplicate1_output0 +outputidx
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_plasma_randomized_pointreplicate1_output0
+opexprlanguage -s hscript $_obj_plasma_randomized_pointreplicate1_output0
+opuserdata -n '___toolcount___' -v '326' $_obj_plasma_randomized_pointreplicate1_output0
+opuserdata -n '___toolid___' -v 'randomized_pointreplicate' $_obj_plasma_randomized_pointreplicate1_output0
+oporder -e pointreplicate set_generated_points_attribs attribdelete1 output0 
+opcf ..
+opset -p on $_obj_plasma_randomized_pointreplicate1
+
+opcf $arg1
+opwire -n $_obj_plasma_init_flow_state -0 $_obj_plasma_randomized_pointreplicate1
+opcf $_obj_plasma_randomized_pointreplicate1
+opwire -n $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs -0 $_obj_plasma_randomized_pointreplicate1_pointreplicate
+opwire -n -i 0 -0 $_obj_plasma_randomized_pointreplicate1_set_generated_points_attribs
+opwire -n $_obj_plasma_randomized_pointreplicate1_pointreplicate -0 $_obj_plasma_randomized_pointreplicate1_attribdelete1
+opwire -n $_obj_plasma_randomized_pointreplicate1_attribdelete1 -0 $_obj_plasma_randomized_pointreplicate1_output0
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_plasma_randomized_pointreplicate1
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_plasma_randomized_pointreplicate1
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

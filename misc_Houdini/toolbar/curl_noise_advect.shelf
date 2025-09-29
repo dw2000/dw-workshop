@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="curl_noise_advect" label="Curl Noise Advect" icon="SOP_heightfield_distort">
+    <helpURL>operator:Sop/subnet</helpURL>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/subnet</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'subnet' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1 (Sop/subnet)
+set _obj_brush_hairs_sim_curl_noise_advect1 = `run("opadd -e -n -v subnet curl_noise_advect1")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_brush_hairs_sim_curl_noise_advect1
+opspareds '    parm {         name    "label1"         baseparm         label   "Input #1 Label"         invisible         export  all     }     parm {         name    "label2"         baseparm         label   "Input #2 Label"         invisible         export  all     }     parm {         name    "iterations"         label   "Iterations"         type    integer         default { "5" }         range   { 0 15 }         parmtag { "script_callback_language" "python" }     }     parm {         name    "thicken"         label   "Thicken"         type    toggle         default { "0" }         parmtag { "script_callback_language" "python" }     }     parm {         name    "sepparm"         label   "sepparm"         type    separator         default { "" }     }     parm {         name    "type"         label   "Noise Type"         type    string         default { "pnoise" }         menu {             "pnoise"        "Perlin Noise"             "onoise"        "Original Perlin Noise"             "snoise"        "Sparse Convolution Noise"             "anoise"        "Alligator Noise"             "xnoise"        "Simplex Noise"             "exact_pnoise"  "Analytic Perlin Noise"             "exact_xnoise"  "Analytic Simplex Noise"         }         parmtag { "autoscope" "0000000000000000" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "freq"         label   "Frequency"         type    float         size    3         default { "0.2" [ "ch(\\"freq1\\")" hscript-expr ] [ "ch(\\"freq1\\")" hscript-expr ] }         range   { 0 10 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "offset"         label   "Offset"         type    float         size    3         default { "555" "-1111.25" "104900" }         range   { 0 10 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "amp"         label   "Amplitude"         type    float         default { [ "0.75*3" hscript-expr ] }         range   { -1 1 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "rough"         label   "Roughness"         type    float         default { "0.46" }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "atten"         label   "Attenuation"         type    float         default { "1" }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "turb"         label   "Turbulence"         type    integer         default { "3" }         range   { 1 12 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "h"         label   "Step Size"         type    float         default { "0.001" }         disablewhen "{ type == exact_pnoise } { type == exact_xnoise }"         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "label3"         baseparm         label   "Input #3 Label"         invisible         export  all     }     parm {         name    "label4"         baseparm         label   "Input #4 Label"         invisible         export  all     } ' $_obj_brush_hairs_sim_curl_noise_advect1
+chblockbegin
+chadd -t 41.708375041708379 41.708375041708379 $_obj_brush_hairs_sim_curl_noise_advect1 freq2
+chkey -t 41.708375041708379 -v 0.035000000000000003 -m 0 -a 0 -A 0 -T a  -F 'ch("freq1")' $_obj_brush_hairs_sim_curl_noise_advect1/freq2
+chadd -t 41.708375041708379 41.708375041708379 $_obj_brush_hairs_sim_curl_noise_advect1 freq3
+chkey -t 41.708375041708379 -v 0.035000000000000003 -m 0 -a 0 -A 0 -T a  -F 'ch("freq1")' $_obj_brush_hairs_sim_curl_noise_advect1/freq3
+chblockend
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1 iterations ( 2 ) type ( exact_pnoise ) freq ( 0.14999999999999999 freq2 freq3 ) offset ( -4945 -1111.25 104900 ) amp ( 0.5 ) rough ( 0.48599999999999999 ) turb ( 4 ) h ( 0.050000000000000003 )
+opcolor -c 0.58399999141693115 0.77600002288818359 1 $_obj_brush_hairs_sim_curl_noise_advect1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1
+opuserdata -n '___toolcount___' -v '3' $_obj_brush_hairs_sim_curl_noise_advect1
+opuserdata -n '___toolid___' -v 'subnet' $_obj_brush_hairs_sim_curl_noise_advect1
+opcf $_obj_brush_hairs_sim_curl_noise_advect1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_noise (Sop/attribvop)
+set _obj_brush_hairs_sim_curl_noise_advect1_noise = `run("opadd -e -n -v attribvop noise")`
+oplocate -x `$arg2 + -1.0642985956572018` -y `$arg3 + 4.4264394271953211` $_obj_brush_hairs_sim_curl_noise_advect1_noise
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }         parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }     }      parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "id"         label   "Id"         type    integer         invisible         default { "-1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "uv"         label   "UV"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "type"         label   "Noise Type"         type    string         default { "pnoise" }         menu {             "pnoise"        "Perlin Noise"             "onoise"        "Original Perlin Noise"             "snoise"        "Sparse Convolution Noise"             "anoise"        "Alligator Noise"             "xnoise"        "Simplex Noise"             "exact_pnoise"  "Analytic Perlin Noise"             "exact_xnoise"  "Analytic Simplex Noise"         }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "freq"         label   "Frequency"         type    float         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "offset"         label   "Offset"         type    float         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "amp"         label   "Amplitude"         type    float         default { "1" }         range   { -1 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "rough"         label   "Roughness"         type    float         default { "0.5" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "atten"         label   "Attenuation"         type    float         default { "1" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "turb"         label   "Turbulence"         type    integer         default { "3" }         range   { 1 12 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "h"         label   "Step Size"         type    float         default { "0.0001" }         disablewhen "{ type == exact_pnoise } { type == exact_xnoise }"         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vexsnippet"         baseparm         label   "Snippet"         export  none     }     parm {         name    "vex_strict"         baseparm         label   "Enforce Prototypes"         export  none     }     parm {         name    "vex_exportlist"         baseparm         label   "Attributes to Create"         export  none     } ' $_obj_brush_hairs_sim_curl_noise_advect1_noise
+opparm $_obj_brush_hairs_sim_curl_noise_advect1_noise  bindings ( 0 ) groupbindings ( 0 )
+chblockbegin
+chadd -t 41.666666666666664 41.666666666666664 $_obj_brush_hairs_sim_curl_noise_advect1_noise freq1
+chkey -t 41.666666666666664 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../freq1")' $_obj_brush_hairs_sim_curl_noise_advect1_noise/freq1
+chadd -t 41.666666666666664 41.666666666666664 $_obj_brush_hairs_sim_curl_noise_advect1_noise freq2
+chkey -t 41.666666666666664 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../freq2")' $_obj_brush_hairs_sim_curl_noise_advect1_noise/freq2
+chadd -t 41.666666666666664 41.666666666666664 $_obj_brush_hairs_sim_curl_noise_advect1_noise freq3
+chkey -t 41.666666666666664 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../freq3")' $_obj_brush_hairs_sim_curl_noise_advect1_noise/freq3
+chadd -t 41.666666666666664 41.666666666666664 $_obj_brush_hairs_sim_curl_noise_advect1_noise offset1
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../offset1")' $_obj_brush_hairs_sim_curl_noise_advect1_noise/offset1
+chadd -t 41.666666666666664 41.666666666666664 $_obj_brush_hairs_sim_curl_noise_advect1_noise offset2
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../offset2")' $_obj_brush_hairs_sim_curl_noise_advect1_noise/offset2
+chadd -t 41.666666666666664 41.666666666666664 $_obj_brush_hairs_sim_curl_noise_advect1_noise offset3
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../offset3")' $_obj_brush_hairs_sim_curl_noise_advect1_noise/offset3
+chadd -t 41.666666666666664 41.666666666666664 $_obj_brush_hairs_sim_curl_noise_advect1_noise amp
+chkey -t 41.666666666666664 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../amp")' $_obj_brush_hairs_sim_curl_noise_advect1_noise/amp
+chadd -t 41.666666666666664 41.666666666666664 $_obj_brush_hairs_sim_curl_noise_advect1_noise rough
+chkey -t 41.666666666666664 -v 0.5 -m 0 -a 0 -A 0 -T a  -F 'ch("../rough")' $_obj_brush_hairs_sim_curl_noise_advect1_noise/rough
+chadd -t 41.666666666666664 41.666666666666664 $_obj_brush_hairs_sim_curl_noise_advect1_noise atten
+chkey -t 41.666666666666664 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../atten")' $_obj_brush_hairs_sim_curl_noise_advect1_noise/atten
+chadd -t 41.666666666666664 41.666666666666664 $_obj_brush_hairs_sim_curl_noise_advect1_noise turb
+chkey -t 41.666666666666664 -v 3 -m 0 -a 0 -A 0 -T a  -F 'ch("../turb")' $_obj_brush_hairs_sim_curl_noise_advect1_noise/turb
+chadd -t 41.666666666666664 41.666666666666664 $_obj_brush_hairs_sim_curl_noise_advect1_noise h
+chkey -t 41.666666666666664 -v 0.0001 -m 0 -a 0 -A 0 -T a  -F 'ch("../h")' $_obj_brush_hairs_sim_curl_noise_advect1_noise/h
+chblockend
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_noise type ( '`chsop("../type")`' ) freq ( freq1 freq2 freq3 ) offset ( offset1 offset2 offset3 ) amp ( amp ) rough ( rough ) atten ( atten ) turb ( turb ) h ( h )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_noise
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_noise
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_noise
+opcf $_obj_brush_hairs_sim_curl_noise_advect1_noise
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + 1.9057900000000001` -y `$arg3 + 1.97631` $_obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopglobal1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopglobal1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 16.971900000000002` -y `$arg3 + 1.2334499999999999` $_obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopoutput1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopoutput1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1 (Vop/curlnoise)
+set _obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1 = `run("opadd -e -n -v curlnoise curlnoise1")`
+oplocate -x `$arg2 + 7.9548300000000003` -y `$arg3 + 0.63364500000000001` $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1
+opuserdata -n '___Version___' -v '' $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_noise_type (Vop/parameter)
+set _obj_brush_hairs_sim_curl_noise_advect1_noise_type = `run("opadd -e -n -v parameter type")`
+oplocate -x `$arg2 + 4.6548299999999996` -y `$arg3 + 3.2336399999999998` $_obj_brush_hairs_sim_curl_noise_advect1_noise_type
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_noise_type parmname ( type ) parmlabel ( 'Noise Type' ) parmtype ( string ) stringdef ( pnoise ) exportcontext ( cvex ) providemenu ( on ) menuchoices ( 'pnoise "Perlin Noise" onoise "Original Perlin Noise" snoise "Sparse Convolution Noise" anoise "Alligator Noise" xnoise "Simplex Noise" exact_pnoise "Analytic Perlin Noise" exact_xnoise "Analytic Simplex Noise" ' )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e off -b off -L off -M off -H on -E off $_obj_brush_hairs_sim_curl_noise_advect1_noise_type
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_noise_type
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_noise_type
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_noise_freq (Vop/parameter)
+set _obj_brush_hairs_sim_curl_noise_advect1_noise_freq = `run("opadd -e -n -v parameter freq")`
+oplocate -x `$arg2 + 4.8548299999999998` -y `$arg3 + 2.8336399999999999` $_obj_brush_hairs_sim_curl_noise_advect1_noise_freq
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_noise_freq parmname ( freq ) parmlabel ( Frequency ) parmtype ( float3 ) float3def ( 1 1 1 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e off -b off -L off -M off -H on -E off $_obj_brush_hairs_sim_curl_noise_advect1_noise_freq
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_noise_freq
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_noise_freq
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_noise_offset (Vop/parameter)
+set _obj_brush_hairs_sim_curl_noise_advect1_noise_offset = `run("opadd -e -n -v parameter offset")`
+oplocate -x `$arg2 + 4.9548300000000003` -y `$arg3 + 2.6336400000000002` $_obj_brush_hairs_sim_curl_noise_advect1_noise_offset
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_noise_offset parmname ( offset ) parmlabel ( Offset ) parmtype ( point ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e off -b off -L off -M off -H on -E off $_obj_brush_hairs_sim_curl_noise_advect1_noise_offset
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_noise_offset
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_noise_offset
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_noise_amp (Vop/parameter)
+set _obj_brush_hairs_sim_curl_noise_advect1_noise_amp = `run("opadd -e -n -v parameter amp")`
+oplocate -x `$arg2 + 5.0548299999999999` -y `$arg3 + 2.43364` $_obj_brush_hairs_sim_curl_noise_advect1_noise_amp
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_noise_amp parmname ( amp ) parmlabel ( Amplitude ) floatdef ( 1 ) rangeflt ( -1 1 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e off -b off -L off -M off -H on -E off $_obj_brush_hairs_sim_curl_noise_advect1_noise_amp
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_noise_amp
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_noise_amp
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_noise_rough (Vop/parameter)
+set _obj_brush_hairs_sim_curl_noise_advect1_noise_rough = `run("opadd -e -n -v parameter rough")`
+oplocate -x `$arg2 + 5.1548299999999996` -y `$arg3 + 2.2336399999999998` $_obj_brush_hairs_sim_curl_noise_advect1_noise_rough
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_noise_rough parmname ( rough ) parmlabel ( Roughness ) floatdef ( 0.5 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e off -b off -L off -M off -H on -E off $_obj_brush_hairs_sim_curl_noise_advect1_noise_rough
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_noise_rough
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_noise_rough
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_noise_atten (Vop/parameter)
+set _obj_brush_hairs_sim_curl_noise_advect1_noise_atten = `run("opadd -e -n -v parameter atten")`
+oplocate -x `$arg2 + 5.2548300000000001` -y `$arg3 + 2.0336400000000001` $_obj_brush_hairs_sim_curl_noise_advect1_noise_atten
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_noise_atten parmname ( atten ) parmlabel ( Attenuation ) floatdef ( 1 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e off -b off -L off -M off -H on -E off $_obj_brush_hairs_sim_curl_noise_advect1_noise_atten
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_noise_atten
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_noise_atten
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_noise_turb (Vop/parameter)
+set _obj_brush_hairs_sim_curl_noise_advect1_noise_turb = `run("opadd -e -n -v parameter turb")`
+oplocate -x `$arg2 + 5.3548299999999998` -y `$arg3 + 1.8336399999999999` $_obj_brush_hairs_sim_curl_noise_advect1_noise_turb
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_noise_turb parmname ( turb ) parmlabel ( Turbulence ) parmtype ( int ) intdef ( 3 ) rangeint ( 1 12 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e off -b off -L off -M off -H on -E off $_obj_brush_hairs_sim_curl_noise_advect1_noise_turb
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_noise_turb
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_noise_turb
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_noise_add1 (Vop/add)
+set _obj_brush_hairs_sim_curl_noise_advect1_noise_add1 = `run("opadd -e -n -v add add1")`
+oplocate -x `$arg2 + 11.0274` -y `$arg3 + 2.6907700000000001` $_obj_brush_hairs_sim_curl_noise_advect1_noise_add1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_brush_hairs_sim_curl_noise_advect1_noise_add1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_noise_add1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_noise_add1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_noise_h (Vop/parameter)
+set _obj_brush_hairs_sim_curl_noise_advect1_noise_h = `run("opadd -e -n -v parameter h")`
+oplocate -x `$arg2 + 5.4548300000000003` -y `$arg3 + 1.63364` $_obj_brush_hairs_sim_curl_noise_advect1_noise_h
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_noise_h parmname ( h ) parmlabel ( 'Step Size' ) floatdef ( 0.0001 ) exportcontext ( cvex ) disablewhen ( '{ type == exact_pnoise } { type == exact_xnoise }' )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e off -b off -L off -M off -H on -E off $_obj_brush_hairs_sim_curl_noise_advect1_noise_h
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_noise_h
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_noise_h
+opcf ..
+opcf ..
+opcf $_obj_brush_hairs_sim_curl_noise_advect1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_output0 (Sop/output)
+set _obj_brush_hairs_sim_curl_noise_advect1_output0 = `run("opadd -e -n -v output output0")`
+oplocate -x `$arg2 + -0.15768843512359604` -y `$arg3 + -6.5250066770980748` $_obj_brush_hairs_sim_curl_noise_advect1_output0
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_output0 outputidx ( 0 )
+chlock $_obj_brush_hairs_sim_curl_noise_advect1_output0 +outputidx
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_output0
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_output0
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_output0
+opuserdata -n '___toolcount___' -v '6' $_obj_brush_hairs_sim_curl_noise_advect1_output0
+opuserdata -n '___toolid___' -v 'subnet' $_obj_brush_hairs_sim_curl_noise_advect1_output0
+opcf $_obj_brush_hairs_sim_curl_noise_advect1_noise
+oporder -e geometryvopglobal1 geometryvopoutput1 curlnoise1 type freq offset amp rough atten turb add1 h 
+opcf ..
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_repeat_end1 (Sop/block_end)
+set _obj_brush_hairs_sim_curl_noise_advect1_repeat_end1 = `run("opadd -e -n -v block_end repeat_end1")`
+oplocate -x `$arg2 + -0.5245942027426892` -y `$arg3 + -4.0125673731933045` $_obj_brush_hairs_sim_curl_noise_advect1_repeat_end1
+chblockbegin
+chadd -t 40 40 $_obj_brush_hairs_sim_curl_noise_advect1_repeat_end1 iterations
+chkey -t 40 -v 10 -m 0 -a 0 -A 0 -T a  -F 'ch("../iterations")' $_obj_brush_hairs_sim_curl_noise_advect1_repeat_end1/iterations
+chblockend
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_repeat_end1 itermethod ( count ) iterations ( iterations ) blockpath ( ../repeat_begin1 )
+opcolor -c 0.75 0.40000000596046448 0 $_obj_brush_hairs_sim_curl_noise_advect1_repeat_end1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_repeat_end1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_repeat_end1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_repeat_end1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1 (Sop/block_begin)
+set _obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1 = `run("opadd -e -n -v block_begin repeat_begin1")`
+oplocate -x `$arg2 + -0.87733006641175371` -y `$arg3 + 8.6918247430529352` $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1 blockpath ( ../repeat_end1 )
+opcolor -c 0.75 0.40000000596046448 0 $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1_metadata1 (Sop/block_begin)
+set _obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1_metadata1 = `run("opadd -e -n -v block_begin repeat_begin1_metadata1")`
+oplocate -x `$arg2 + 6.3267090195445652` -y `$arg3 + 7.459093493799438` $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1_metadata1
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1_metadata1 method ( metadata ) blockpath ( ../repeat_end1 )
+opcolor -c 0.75 0.40000000596046448 0 $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1_metadata1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1_metadata1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1_metadata1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1_metadata1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_switch1 (Sop/switch)
+set _obj_brush_hairs_sim_curl_noise_advect1_switch1 = `run("opadd -e -n -v switch switch1")`
+oplocate -x `$arg2 + 0.62731110338985274` -y `$arg3 + -1.710922670773408` $_obj_brush_hairs_sim_curl_noise_advect1_switch1
+chblockbegin
+chadd -t 40 40 $_obj_brush_hairs_sim_curl_noise_advect1_switch1 input
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../thicken")' $_obj_brush_hairs_sim_curl_noise_advect1_switch1/input
+chblockend
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_switch1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_switch1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_switch1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_merge1 (Sop/merge)
+set _obj_brush_hairs_sim_curl_noise_advect1_merge1 = `run("opadd -e -n -v merge merge1")`
+oplocate -x `$arg2 + 1.9209080892450139` -y `$arg3 + 1.8729409844985057` $_obj_brush_hairs_sim_curl_noise_advect1_merge1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_merge1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_merge1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_merge1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_group1 (Sop/groupcreate)
+set _obj_brush_hairs_sim_curl_noise_advect1_group1 = `run("opadd -e -n -v groupcreate group1")`
+oplocate -x `$arg2 + -0.26439065263053596` -y `$arg3 + 3.2056756217475781` $_obj_brush_hairs_sim_curl_noise_advect1_group1
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_group1 groupname ( _latest ) grouptype ( point )
+opset -d off -r off -h on -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_group1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_group1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_group1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_split1 (Sop/split)
+set _obj_brush_hairs_sim_curl_noise_advect1_split1 = `run("opadd -e -n -v split split1")`
+oplocate -x `$arg2 + -1.1665399448822411` -y `$arg3 + 6.7234275740813692` $_obj_brush_hairs_sim_curl_noise_advect1_split1
+opparm $_obj_brush_hairs_sim_curl_noise_advect1_split1 group ( _latest ) grouptype ( points )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_split1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_split1
+opuserdata -n '___Version___' -v '' $_obj_brush_hairs_sim_curl_noise_advect1_split1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_null1 (Sop/null)
+set _obj_brush_hairs_sim_curl_noise_advect1_null1 = `run("opadd -e -n -v null null1")`
+oplocate -x `$arg2 + 2.4202547650794775` -y `$arg3 + 4.6768328645409571` $_obj_brush_hairs_sim_curl_noise_advect1_null1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_null1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_null1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_null1
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_IN (Sop/null)
+set _obj_brush_hairs_sim_curl_noise_advect1_IN = `run("opadd -e -n -v null IN")`
+oplocate -x `$arg2 + -1.0608486005865059` -y `$arg3 + 10.914180264556201` $_obj_brush_hairs_sim_curl_noise_advect1_IN
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_IN
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_IN
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_IN
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_switch2 (Sop/switch)
+set _obj_brush_hairs_sim_curl_noise_advect1_switch2 = `run("opadd -e -n -v switch switch2")`
+oplocate -x `$arg2 + -3.5069902770755839` -y `$arg3 + 5.437330788259672` $_obj_brush_hairs_sim_curl_noise_advect1_switch2
+chblockbegin
+chadd -t 40 40 $_obj_brush_hairs_sim_curl_noise_advect1_switch2 input
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'detail("../repeat_begin1_metadata1", "iteration", 0) > 0' $_obj_brush_hairs_sim_curl_noise_advect1_switch2/input
+chblockend
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_switch2 input ( input )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_switch2
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_switch2
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_switch2
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_switch3 (Sop/switch)
+set _obj_brush_hairs_sim_curl_noise_advect1_switch3 = `run("opadd -e -n -v switch switch3")`
+oplocate -x `$arg2 + 1.0885497434369475` -y `$arg3 + 0.48177205821905983` $_obj_brush_hairs_sim_curl_noise_advect1_switch3
+chblockbegin
+chadd -t 40 40 $_obj_brush_hairs_sim_curl_noise_advect1_switch3 input
+chkey -t 40 -v 0 -m 0 -a 0 -A 0 -T a  -F 'detail("../repeat_begin1_metadata1", "iteration", 0) > 0' $_obj_brush_hairs_sim_curl_noise_advect1_switch3/input
+chblockend
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_switch3 input ( input )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_switch3
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_switch3
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_switch3
+
+# Node $_obj_brush_hairs_sim_curl_noise_advect1_groupdelete1 (Sop/groupdelete)
+set _obj_brush_hairs_sim_curl_noise_advect1_groupdelete1 = `run("opadd -e -n -v groupdelete groupdelete1")`
+oplocate -x `$arg2 + -0.26439065263053596` -y `$arg3 + -5.2184644600078256` $_obj_brush_hairs_sim_curl_noise_advect1_groupdelete1
+opparm $_obj_brush_hairs_sim_curl_noise_advect1_groupdelete1  deletions ( 1 )
+opparm -V 19.5.368 $_obj_brush_hairs_sim_curl_noise_advect1_groupdelete1 grouptype1 ( points ) group1 ( _latest )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_brush_hairs_sim_curl_noise_advect1_groupdelete1
+opexprlanguage -s hscript $_obj_brush_hairs_sim_curl_noise_advect1_groupdelete1
+opuserdata -n '___Version___' -v '19.5.368' $_obj_brush_hairs_sim_curl_noise_advect1_groupdelete1
+oporder -e output0 noise repeat_end1 repeat_begin1 repeat_begin1_metadata1 switch1 merge1 group1 split1 null1 IN switch2 switch3 groupdelete1 
+opcf ..
+opset -p on $_obj_brush_hairs_sim_curl_noise_advect1
+
+opcf $arg1
+opwire -n $_obj_brush_hairs_sim_color1 -0 $_obj_brush_hairs_sim_curl_noise_advect1
+opcf $_obj_brush_hairs_sim_curl_noise_advect1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_groupdelete1 -0 $_obj_brush_hairs_sim_curl_noise_advect1_output0
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_switch2 -0 $_obj_brush_hairs_sim_curl_noise_advect1_noise
+opcf $_obj_brush_hairs_sim_curl_noise_advect1_noise
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_noise_add1 -0 $_obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopoutput1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_noise_type -0 $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopglobal1 -1 $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_noise_freq -2 $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_noise_offset -3 $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_noise_amp -4 $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_noise_rough -5 $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_noise_atten -6 $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_noise_turb -7 $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_noise_h -8 $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_noise_geometryvopglobal1 -0 $_obj_brush_hairs_sim_curl_noise_advect1_noise_add1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_noise_curlnoise1 -1 $_obj_brush_hairs_sim_curl_noise_advect1_noise_add1
+opcf ..
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_switch1 -0 $_obj_brush_hairs_sim_curl_noise_advect1_repeat_end1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_IN -0 $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_group1 -0 $_obj_brush_hairs_sim_curl_noise_advect1_switch1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_switch3 -1 $_obj_brush_hairs_sim_curl_noise_advect1_switch1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_null1 -0 $_obj_brush_hairs_sim_curl_noise_advect1_merge1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_group1 -1 $_obj_brush_hairs_sim_curl_noise_advect1_merge1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_noise -0 $_obj_brush_hairs_sim_curl_noise_advect1_group1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1 -0 $_obj_brush_hairs_sim_curl_noise_advect1_split1
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1 -0 $_obj_brush_hairs_sim_curl_noise_advect1_null1
+opwire -n -i 0 -0 $_obj_brush_hairs_sim_curl_noise_advect1_IN
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_repeat_begin1 -0 $_obj_brush_hairs_sim_curl_noise_advect1_switch2
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_split1 -1 $_obj_brush_hairs_sim_curl_noise_advect1_switch2
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_group1 -0 $_obj_brush_hairs_sim_curl_noise_advect1_switch3
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_merge1 -1 $_obj_brush_hairs_sim_curl_noise_advect1_switch3
+opwire -n $_obj_brush_hairs_sim_curl_noise_advect1_repeat_end1 -0 $_obj_brush_hairs_sim_curl_noise_advect1_groupdelete1
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_brush_hairs_sim_curl_noise_advect1
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_brush_hairs_sim_curl_noise_advect1
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

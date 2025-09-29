@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="100x_scale" label="100x Scale" icon="MISC_python">
+    <script scriptType="python"><![CDATA[target_parm_list = ["near", "far", "tx", "ty", "tz", "px", "py", "pz", "t2x", "t2y", "t2z", "p2x", "p2y", "p2z", "t3x", "t3y", "t3z", "p3x", "p3y", "p3z", "head_pivot_height", "handle_pivot_height"]
+scale_factor = 100
+
+selection = hou.selectedNodes()
+if len(selection) > 0:
+    for each_node in selection:
+        parm_list =  [each.name() for each in each_node.parms()]
+        valid_parms = list(set(target_parm_list) & set(parm_list))
+        valid_parms.sort()
+        for each_parm in valid_parms:
+            current_parm = each_node.parm(each_parm)
+            keys = current_parm.keyframes()
+            
+            if len(keys) > 0:
+                for each_key in keys:
+                    each_key.setValue(each_key.value() * scale_factor)
+                current_parm.setKeyframes(keys)
+                
+            else:
+                current_parm.set(current_parm.eval() * scale_factor)]]></script>
+  </tool>
+</shelfDocument>
