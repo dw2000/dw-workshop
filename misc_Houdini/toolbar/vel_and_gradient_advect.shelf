@@ -5,7 +5,7 @@
  Note, that two definitions of the same element are not allowed in
  a single file. -->
 
-  <tool name="vel and gradient advect" label="vel_and_gradient_advect" icon="SOP_subnet">
+  <tool name="vel_and_gradient_advect" label="DW Vel and Gradient Advect" icon="SOP_subnet">
     <helpURL>operator:Sop/subnet</helpURL>
     <toolMenuContext name="network">
       <contextOpType>Sop/subnet</contextOpType>
