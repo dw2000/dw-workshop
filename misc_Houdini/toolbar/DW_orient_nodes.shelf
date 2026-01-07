@@ -1,0 +1,886 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="DW_orient_nodes" label="DW Orient Attribute Nodes" icon="SOP_normal">
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'attribvop' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_flying_cans_FG_attribcreate_orient (Sop/attribcreate::2.0)
+set _obj_flying_cans_FG_attribcreate_orient = `run("opadd -e -n -v attribcreate::2.0 attribcreate_orient")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_flying_cans_FG_attribcreate_orient
+opparm $_obj_flying_cans_FG_attribcreate_orient  numattr ( 1 )
+opparm -V 20.5.278 $_obj_flying_cans_FG_attribcreate_orient name1 ( orient ) typeinfo1 ( quaternion ) size1 ( 4 ) default1v ( 0 0 0 1 ) writevalues1 ( off )
+opcolor -c 0.62400001287460327 0.32899999618530273 0.39599999785423279 $_obj_flying_cans_FG_attribcreate_orient
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_flying_cans_FG_attribcreate_orient
+opexprlanguage -s hscript $_obj_flying_cans_FG_attribcreate_orient
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_attribcreate_orient
+opset -p on $_obj_flying_cans_FG_attribcreate_orient
+opcf $arg1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v (Sop/attribvop)
+set _obj_flying_cans_FG_redo_orient_from_v = `run("opadd -e -n -v attribvop redo_orient_from_v")`
+oplocate -x `$arg2 + 0.2027322934328879` -y `$arg3 + -2.2736069825775855` $_obj_flying_cans_FG_redo_orient_from_v
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"         grouptag { "sidefx::switcher" "stdswitcher" }          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vexsnippet"             baseparm             label   "Snippet"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }         parm {             name    "vex_exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }         parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }     }      parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "uv"         label   "UV"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v_direction_mix"         label   "v_direction_mix"         type    float         default { "0.5" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "parm_seed"         label   "seed"         type    float         default { "105.88" }         range   { -10000 10000 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "randomize_rotation"         label   "randomize_rotation"         type    float         default { "1" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "backwards_portion"         label   "backwards_portion"         type    float         default { "0.35" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     } ' $_obj_flying_cans_FG_redo_orient_from_v
+opparm $_obj_flying_cans_FG_redo_orient_from_v  bindings ( 0 ) groupbindings ( 0 )
+opparm -V 20.5.278 $_obj_flying_cans_FG_redo_orient_from_v v_direction_mix ( 1 ) parm_seed ( -6287 )
+opcolor -c 0.62400001287460327 0.32899999618530273 0.39599999785423279 $_obj_flying_cans_FG_redo_orient_from_v
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_flying_cans_FG_redo_orient_from_v
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v
+opcf $_obj_flying_cans_FG_redo_orient_from_v
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_flying_cans_FG_redo_orient_from_v_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + -61.398099999999999` -y `$arg3 + 5.0697200000000002` $_obj_flying_cans_FG_redo_orient_from_v_geometryvopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_geometryvopglobal1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_geometryvopglobal1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_flying_cans_FG_redo_orient_from_v_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 74.631900000000002` -y `$arg3 + -1.6352100000000001` $_obj_flying_cans_FG_redo_orient_from_v_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_geometryvopoutput1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_geometryvopoutput1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_bind1 (Vop/bind)
+set _obj_flying_cans_FG_redo_orient_from_v_bind1 = `run("opadd -e -n -v bind bind1")`
+oplocate -x `$arg2 + 65.799999999999997` -y `$arg3 + 5.50176` $_obj_flying_cans_FG_redo_orient_from_v_bind1
+opparm -V 20.5.278 $_obj_flying_cans_FG_redo_orient_from_v_bind1 parmname ( orient ) parmtype ( float4 ) overridetype ( on ) useasparmdefiner ( on ) exportparm ( whenconnected ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_bind1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_bind1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v_bind1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_normalize1 (Vop/normalize)
+set _obj_flying_cans_FG_redo_orient_from_v_normalize1 = `run("opadd -e -n -v normalize normalize1")`
+oplocate -x `$arg2 + -2.49532` -y `$arg3 + 0.73768500000000004` $_obj_flying_cans_FG_redo_orient_from_v_normalize1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_normalize1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_normalize1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_normalize1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_bias (Vop/parameter)
+set _obj_flying_cans_FG_redo_orient_from_v_bias = `run("opadd -e -n -v parameter bias")`
+oplocate -x `$arg2 + 34.4191` -y `$arg3 + -3.1215299999999999` $_obj_flying_cans_FG_redo_orient_from_v_bias
+opparm -V 20.5.278 $_obj_flying_cans_FG_redo_orient_from_v_bias parmname ( v_direction_mix ) floatdef ( 0.5 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_bias
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_bias
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v_bias
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_bind3 (Vop/bind)
+set _obj_flying_cans_FG_redo_orient_from_v_bind3 = `run("opadd -e -n -v bind bind3")`
+oplocate -x `$arg2 + -47.1357` -y `$arg3 + -7.3728499999999997` $_obj_flying_cans_FG_redo_orient_from_v_bind3
+opparm -V 20.5.278 $_obj_flying_cans_FG_redo_orient_from_v_bind3 parmname ( id ) parmtype ( int ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_bind3
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_bind3
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v_bind3
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_switch1 (Vop/switch)
+set _obj_flying_cans_FG_redo_orient_from_v_switch1 = `run("opadd -e -n -v switch switch1")`
+oplocate -x `$arg2 + -43.781700000000001` -y `$arg3 + -7.0595400000000001` $_obj_flying_cans_FG_redo_orient_from_v_switch1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_switch1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_switch1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v_switch1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_const1 (Vop/constant)
+set _obj_flying_cans_FG_redo_orient_from_v_const1 = `run("opadd -e -n -v constant const1")`
+oplocate -x `$arg2 + -39.050899999999999` -y `$arg3 + -7.4822699999999998` $_obj_flying_cans_FG_redo_orient_from_v_const1
+opparm -V 20.5.278 $_obj_flying_cans_FG_redo_orient_from_v_const1 floatdef ( -813.2 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_const1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_const1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v_const1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_random1 (Vop/random)
+set _obj_flying_cans_FG_redo_orient_from_v_random1 = `run("opadd -e -n -v random random1")`
+oplocate -x `$arg2 + -8.5674100000000006` -y `$arg3 + -10.8047` $_obj_flying_cans_FG_redo_orient_from_v_random1
+opparm $_obj_flying_cans_FG_redo_orient_from_v_random1 signature ( fn ) roundtoint ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_random1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_random1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_random1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_add1 (Vop/add)
+set _obj_flying_cans_FG_redo_orient_from_v_add1 = `run("opadd -e -n -v add add1")`
+oplocate -x `$arg2 + -35.4831` -y `$arg3 + -9.1490299999999998` $_obj_flying_cans_FG_redo_orient_from_v_add1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_add1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_add1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v_add1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_input3 (Vop/parameter)
+set _obj_flying_cans_FG_redo_orient_from_v_input3 = `run("opadd -e -n -v parameter input3")`
+oplocate -x `$arg2 + -40.341500000000003` -y `$arg3 + -9.1490299999999998` $_obj_flying_cans_FG_redo_orient_from_v_input3
+opparm -V 20.5.278 $_obj_flying_cans_FG_redo_orient_from_v_input3 parmname ( parm_seed ) parmlabel ( seed ) floatdef ( 105.88 ) rangeflt ( -10000 10000 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_input3
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_input3
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v_input3
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_matxtoquat1 (Vop/matxtoquat)
+set _obj_flying_cans_FG_redo_orient_from_v_matxtoquat1 = `run("opadd -e -n -v matxtoquat matxtoquat1")`
+oplocate -x `$arg2 + 34.4191` -y `$arg3 + 2.4847399999999999` $_obj_flying_cans_FG_redo_orient_from_v_matxtoquat1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_matxtoquat1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_matxtoquat1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_matxtoquat1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_makeinstancexform1 (Vop/makeinstancexform)
+set _obj_flying_cans_FG_redo_orient_from_v_makeinstancexform1 = `run("opadd -e -n -v makeinstancexform makeinstancexform1")`
+oplocate -x `$arg2 + 26.899999999999999` -y `$arg3 + 2.1369600000000002` $_obj_flying_cans_FG_redo_orient_from_v_makeinstancexform1
+opparm $_obj_flying_cans_FG_redo_orient_from_v_makeinstancexform1 useN ( on ) useup ( on )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_makeinstancexform1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_makeinstancexform1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_makeinstancexform1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_m4tom3 (Vop/m4tom3)
+set _obj_flying_cans_FG_redo_orient_from_v_m4tom3 = `run("opadd -e -n -v m4tom3 m4tom3")`
+oplocate -x `$arg2 + 30.219200000000001` -y `$arg3 + 2.2505500000000001` $_obj_flying_cans_FG_redo_orient_from_v_m4tom3
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_m4tom3
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_m4tom3
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_m4tom3
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_subconst1 (Vop/subconst)
+set _obj_flying_cans_FG_redo_orient_from_v_subconst1 = `run("opadd -e -n -v subconst subconst1")`
+oplocate -x `$arg2 + -5.5385200000000001` -y `$arg3 + -10.8047` $_obj_flying_cans_FG_redo_orient_from_v_subconst1
+opparm $_obj_flying_cans_FG_redo_orient_from_v_subconst1 signature ( n ) subconst ( 0.5 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_subconst1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_subconst1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_subconst1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_cross1 (Vop/cross)
+set _obj_flying_cans_FG_redo_orient_from_v_cross1 = `run("opadd -e -n -v cross cross1")`
+oplocate -x `$arg2 + 8.1991800000000001` -y `$arg3 + -5.6981599999999997` $_obj_flying_cans_FG_redo_orient_from_v_cross1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_cross1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_cross1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_cross1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_normalize4 (Vop/normalize)
+set _obj_flying_cans_FG_redo_orient_from_v_normalize4 = `run("opadd -e -n -v normalize normalize4")`
+oplocate -x `$arg2 + 12.797800000000001` -y `$arg3 + -5.9501499999999998` $_obj_flying_cans_FG_redo_orient_from_v_normalize4
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_normalize4
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_normalize4
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_normalize4
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_quattovec1 (Vop/quattovec)
+set _obj_flying_cans_FG_redo_orient_from_v_quattovec1 = `run("opadd -e -n -v quattovec quattovec1")`
+oplocate -x `$arg2 + 39.679400000000001` -y `$arg3 + 0.34281899999999998` $_obj_flying_cans_FG_redo_orient_from_v_quattovec1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_quattovec1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_quattovec1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_quattovec1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_quaternion1 (Vop/quaternion)
+set _obj_flying_cans_FG_redo_orient_from_v_quaternion1 = `run("opadd -e -n -v quaternion quaternion1")`
+oplocate -x `$arg2 + 50.747100000000003` -y `$arg3 + 1.5705499999999999` $_obj_flying_cans_FG_redo_orient_from_v_quaternion1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_quaternion1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_quaternion1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_quaternion1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_normalize5 (Vop/normalize)
+set _obj_flying_cans_FG_redo_orient_from_v_normalize5 = `run("opadd -e -n -v normalize normalize5")`
+oplocate -x `$arg2 + 42.865299999999998` -y `$arg3 + -0.46745799999999998` $_obj_flying_cans_FG_redo_orient_from_v_normalize5
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_normalize5
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_normalize5
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_normalize5
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_length1 (Vop/length)
+set _obj_flying_cans_FG_redo_orient_from_v_length1 = `run("opadd -e -n -v length length1")`
+oplocate -x `$arg2 + 42.506999999999998` -y `$arg3 + 2.29474` $_obj_flying_cans_FG_redo_orient_from_v_length1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_length1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_length1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_length1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_multiply1 (Vop/multiply)
+set _obj_flying_cans_FG_redo_orient_from_v_multiply1 = `run("opadd -e -n -v multiply multiply1")`
+oplocate -x `$arg2 + 45.818399999999997` -y `$arg3 + 1.7176899999999999` $_obj_flying_cans_FG_redo_orient_from_v_multiply1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_multiply1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_multiply1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v_multiply1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_const4 (Vop/constant)
+set _obj_flying_cans_FG_redo_orient_from_v_const4 = `run("opadd -e -n -v constant const4")`
+oplocate -x `$arg2 + 3.9574799999999999` -y `$arg3 + -12.6646` $_obj_flying_cans_FG_redo_orient_from_v_const4
+opparm -V 20.5.278 $_obj_flying_cans_FG_redo_orient_from_v_const4 consttype ( float3 ) float3def ( 0 -1 0 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_const4
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_const4
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v_const4
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_bias1 (Vop/parameter)
+set _obj_flying_cans_FG_redo_orient_from_v_bias1 = `run("opadd -e -n -v parameter bias1")`
+oplocate -x `$arg2 + 13.7797` -y `$arg3 + -9.8179400000000001` $_obj_flying_cans_FG_redo_orient_from_v_bias1
+opparm -V 20.5.278 $_obj_flying_cans_FG_redo_orient_from_v_bias1 parmname ( randomize_rotation ) floatdef ( 1 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_bias1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_bias1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v_bias1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_mix1 (Vop/mix)
+set _obj_flying_cans_FG_redo_orient_from_v_mix1 = `run("opadd -e -n -v mix mix1")`
+oplocate -x `$arg2 + 17.041399999999999` -y `$arg3 + -5.8001500000000004` $_obj_flying_cans_FG_redo_orient_from_v_mix1
+opparm $_obj_flying_cans_FG_redo_orient_from_v_mix1 signature ( v )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_mix1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_mix1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_mix1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_normalize6 (Vop/normalize)
+set _obj_flying_cans_FG_redo_orient_from_v_normalize6 = `run("opadd -e -n -v normalize normalize6")`
+oplocate -x `$arg2 + 19.7805` -y `$arg3 + -5.9501499999999998` $_obj_flying_cans_FG_redo_orient_from_v_normalize6
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_normalize6
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_normalize6
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_normalize6
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_addconst1 (Vop/addconst)
+set _obj_flying_cans_FG_redo_orient_from_v_addconst1 = `run("opadd -e -n -v addconst addconst1")`
+oplocate -x `$arg2 + -22.974900000000002` -y `$arg3 + -2.8602099999999999` $_obj_flying_cans_FG_redo_orient_from_v_addconst1
+opparm $_obj_flying_cans_FG_redo_orient_from_v_addconst1 signature ( f ) addconst ( 11.11 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_addconst1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_addconst1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_addconst1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_random2 (Vop/random)
+set _obj_flying_cans_FG_redo_orient_from_v_random2 = `run("opadd -e -n -v random random2")`
+oplocate -x `$arg2 + -16.805800000000001` -y `$arg3 + -2.1708099999999999` $_obj_flying_cans_FG_redo_orient_from_v_random2
+opparm $_obj_flying_cans_FG_redo_orient_from_v_random2 roundtoint ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_random2
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_random2
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_random2
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_parm1 (Vop/parameter)
+set _obj_flying_cans_FG_redo_orient_from_v_parm1 = `run("opadd -e -n -v parameter parm1")`
+oplocate -x `$arg2 + -18.166399999999999` -y `$arg3 + -3.8253900000000001` $_obj_flying_cans_FG_redo_orient_from_v_parm1
+opparm -V 20.5.278 $_obj_flying_cans_FG_redo_orient_from_v_parm1 parmname ( backwards_portion ) floatdef ( 0.35 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_parm1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_parm1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v_parm1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_compare1 (Vop/compare)
+set _obj_flying_cans_FG_redo_orient_from_v_compare1 = `run("opadd -e -n -v compare compare1")`
+oplocate -x `$arg2 + -13.8825` -y `$arg3 + -2.1708099999999999` $_obj_flying_cans_FG_redo_orient_from_v_compare1
+opparm -V 20.5.278 $_obj_flying_cans_FG_redo_orient_from_v_compare1 cmp ( lt )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_compare1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_compare1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v_compare1
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_switch2 (Vop/switch)
+set _obj_flying_cans_FG_redo_orient_from_v_switch2 = `run("opadd -e -n -v switch switch2")`
+oplocate -x `$arg2 + -9.6729299999999991` -y `$arg3 + 0.88768499999999995` $_obj_flying_cans_FG_redo_orient_from_v_switch2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_switch2
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_switch2
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_redo_orient_from_v_switch2
+
+# Node $_obj_flying_cans_FG_redo_orient_from_v_negate1 (Vop/negate)
+set _obj_flying_cans_FG_redo_orient_from_v_negate1 = `run("opadd -e -n -v negate negate1")`
+oplocate -x `$arg2 + -14.104699999999999` -y `$arg3 + -0.17852999999999999` $_obj_flying_cans_FG_redo_orient_from_v_negate1
+opparm $_obj_flying_cans_FG_redo_orient_from_v_negate1 signature ( v )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_redo_orient_from_v_negate1
+opexprlanguage -s hscript $_obj_flying_cans_FG_redo_orient_from_v_negate1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_redo_orient_from_v_negate1
+opcf ..
+opcf $_obj_flying_cans_FG_redo_orient_from_v
+oporder -e geometryvopglobal1 geometryvopoutput1 bind1 normalize1 bias bind3 switch1 const1 random1 add1 input3 matxtoquat1 makeinstancexform1 m4tom3 subconst1 cross1 normalize4 quattovec1 quaternion1 normalize5 length1 multiply1 const4 bias1 mix1 normalize6 addconst1 random2 parm1 compare1 switch2 negate1 
+opcf ..
+opset -p on $_obj_flying_cans_FG_redo_orient_from_v
+opcf $arg1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin (Sop/attribvop)
+set _obj_flying_cans_FG_randomize_orient_spin = `run("opadd -e -n -v attribvop randomize_orient_spin")`
+oplocate -x `$arg2 + 0.2027322934328879` -y `$arg3 + -4.5717637294210682` $_obj_flying_cans_FG_randomize_orient_spin
+opspareds '    parm {         name    "bindgroup"         baseparm         label   "Group"         export  none         bindselector uvselect "Modify Points"             "Select the points to affect and press Enter to complete."             0 1 0xffffffff 0 bindgrouptype 0     }     parm {         name    "bindgrouptype"         baseparm         label   "Group Type"         export  none     }     parm {         name    "bindclass"         baseparm         label   "Run Over"         export  none     }     parm {         name    "vex_numcount"         baseparm         label   "Number Count"         export  none     }     parm {         name    "vex_threadjobsize"         baseparm         label   "Thread Job Size"         export  none     }     group {         name    "stdswitcher3"         label   "Vex Setup"         grouptag { "sidefx::switcher" "stdswitcher" }          parm {             name    "vexsrc"             baseparm             label   "Vex Source"             export  all         }         parm {             name    "shoppath"             baseparm             label   "Shop Path"             export  all         }         parm {             name    "script"             baseparm             label   "Script"             export  all         }         parm {             name    "clear"             baseparm             label   "Re-load VEX Functions"             export  all         }         parm {             name    "vexsnippet"             baseparm             label   "Snippet"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }         parm {             name    "vex_exportlist"             baseparm             label   "Attributes to Create"             export  none         }         parm {             name    "vop_compiler"             baseparm             label   "Compiler"             export  none         }         parm {             name    "vop_forcecompile"             baseparm             label   "Force Compile"             export  none         }         parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "vex_multithread"             baseparm             label   "Enable Multithreading"             export  none         }     }      group {         name    "stdswitcher3_1"         label   "Attribute Bindings"          parm {             name    "vex_precision"             baseparm             label   "VEX Precision"             export  none         }         parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindname#"                 baseparm                 label   "Attribute Name"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "groupautobind"             baseparm             label   "Autobind Groups by Name"             export  none         }         multiparm {             name    "groupbindings"             label    "Group Bindings"             baseparm             default 0             parmtag { "multistartoffset" "1" }              parm {                 name    "bindgroupname#"                 baseparm                 label   "Group Name"                 export  none             }             parm {                 name    "bindgroupparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }          parm {             name    "vex_updatenmls"             baseparm             label   "Update Normals If Displaced"             export  none         }         parm {             name    "vex_matchattrib"             baseparm             label   "Attribute to Match"             export  none         }         parm {             name    "vex_inplace"             baseparm             label   "Compute Results In Place"             export  none         }         parm {             name    "vex_selectiongroup"             baseparm             label   "Output Selection Group"             export  none         }     }      parm {         name    "ptnum"         label   "Point Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "vtxnum"         label   "Vertex Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "primnum"         label   "Primitive Number"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "id"         label   "Id"         type    integer         invisible         default { "-1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numpt"         label   "Number of Points"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numvtx"         label   "Number of Vertices"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "numprim"         label   "Number of Prims"         type    integer         invisible         default { "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Time"         label   "Time"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "TimeInc"         label   "Time Inc"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Frame"         label   "Frame"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "life"         label   "Life"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "age"         label   "Age"         type    float         invisible         default { "0" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput2"         label   "Second Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput3"         label   "Third Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput4"         label   "Fourth Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "OpInput1"         label   "First Input"         type    string         invisible         default { "" }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "uv"         label   "UV"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "P"         label   "P"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v"         label   "Velocity"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "force"         label   "Force"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "Cd"         label   "Cd"         type    float         invisible         size    3         default { "1" "1" "1" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "N"         label   "N"         type    float         invisible         size    3         default { "0" "0" "0" }         range   { 0 10 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "parm_max_speed"         label   "Max Speed"         type    float         default { "40" }         range   { 0 300 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "offset_degrees"         label   "offset_degrees"         type    float         default { "0" }         range   { -360 360 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "parm_seed"         label   "seed"         type    float         default { "105.88" }         range   { -10000 10000 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "horizontal_axis_bias"         label   "horizontal_axis_bias"         type    float         default { "0.5" }         range   { 0 1 }         parmtag { "parmvop" "1" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "v_mix"         label   "v_mix"         type    ramp_flt         default { "2" }         range   { 1! 10 }         parmtag { "parmvop" "1" }         parmtag { "rampbasis_var" "v_mix_the_basis_strings" }         parmtag { "rampbasisdefault" "linear" }         parmtag { "rampfloatdefault" "1pos ( 0 ) 1value ( 0 ) 1interp ( linear ) 2pos ( 1 ) 2value ( 1 ) 2interp ( linear )" }         parmtag { "rampkeys_var" "v_mix_the_key_positions" }         parmtag { "rampshowcontrolsdefault" "1" }         parmtag { "rampvalues_var" "v_mix_the_key_values" }         parmtag { "shaderparmcontexts" "cvex" }     }     parm {         name    "spin_speed_distribution"         label   "spin_speed_distribution"         type    ramp_flt         default { "2" }         range   { 1! 10 }         parmtag { "parmvop" "1" }         parmtag { "rampbasis_var" "spin_speed_distribution_the_basis_strings" }         parmtag { "rampbasisdefault" "linear" }         parmtag { "rampfloatdefault" "1pos ( 0 ) 1value ( 0 ) 1interp ( linear ) 2pos ( 1 ) 2value ( 1 ) 2interp ( linear )" }         parmtag { "rampkeys_var" "spin_speed_distribution_the_key_positions" }         parmtag { "rampshowcontrolsdefault" "1" }         parmtag { "rampvalues_var" "spin_speed_distribution_the_key_values" }         parmtag { "shaderparmcontexts" "cvex" }     } ' $_obj_flying_cans_FG_randomize_orient_spin
+opparm $_obj_flying_cans_FG_randomize_orient_spin  bindings ( 0 ) groupbindings ( 0 ) v_mix ( 2 ) spin_speed_distribution ( 4 )
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin parm_max_speed ( 31 ) parm_seed ( -5684 ) horizontal_axis_bias ( 0.9 ) v_mix1interp ( constant ) v_mix2pos ( 0.879603385925293 ) v_mix2interp ( constant ) spin_speed_distribution ( 4 ) spin_speed_distribution1pos ( 0.11898016929626465 ) spin_speed_distribution1interp ( constant ) spin_speed_distribution2pos ( 0.45467421412467957 ) spin_speed_distribution2value ( 1 ) spin_speed_distribution2interp ( monotonecubic ) spin_speed_distribution3pos ( 0.7769303917884827 ) spin_speed_distribution3value ( 0.9896726012229919 ) spin_speed_distribution3interp ( monotonecubic ) spin_speed_distribution4pos ( 1 ) spin_speed_distribution4value ( 0.75 ) spin_speed_distribution4interp ( monotonecubic )
+opcolor -c 0.62400001287460327 0.32899999618530273 0.39599999785423279 $_obj_flying_cans_FG_randomize_orient_spin
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_flying_cans_FG_randomize_orient_spin
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin
+opcf $_obj_flying_cans_FG_randomize_orient_spin
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_geometryvopglobal1 (Vop/geometryvopglobal::2.0)
+set _obj_flying_cans_FG_randomize_orient_spin_geometryvopglobal1 = `run("opadd -e -n -v geometryvopglobal::2.0 geometryvopglobal1")`
+oplocate -x `$arg2 + -21.808` -y `$arg3 + -1.52694` $_obj_flying_cans_FG_randomize_orient_spin_geometryvopglobal1
+opset -d on -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_geometryvopglobal1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_geometryvopglobal1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_geometryvopglobal1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_geometryvopoutput1 (Vop/geometryvopoutput)
+set _obj_flying_cans_FG_randomize_orient_spin_geometryvopoutput1 = `run("opadd -e -n -v geometryvopoutput geometryvopoutput1")`
+oplocate -x `$arg2 + 105.628` -y `$arg3 + -7.6081200000000004` $_obj_flying_cans_FG_randomize_orient_spin_geometryvopoutput1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_geometryvopoutput1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_geometryvopoutput1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_geometryvopoutput1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_const1 (Vop/constant)
+set _obj_flying_cans_FG_randomize_orient_spin_const1 = `run("opadd -e -n -v constant const1")`
+oplocate -x `$arg2 + -12.611000000000001` -y `$arg3 + 7.1314700000000002` $_obj_flying_cans_FG_randomize_orient_spin_const1
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_const1 floatdef ( -813.2 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_const1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_const1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_const1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_random1 (Vop/random)
+set _obj_flying_cans_FG_randomize_orient_spin_random1 = `run("opadd -e -n -v random random1")`
+oplocate -x `$arg2 + 8.2974599999999992` -y `$arg3 + 0.82070100000000001` $_obj_flying_cans_FG_randomize_orient_spin_random1
+opparm $_obj_flying_cans_FG_randomize_orient_spin_random1 signature ( fn ) roundtoint ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_random1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_random1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_random1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_add1 (Vop/add)
+set _obj_flying_cans_FG_randomize_orient_spin_add1 = `run("opadd -e -n -v add add1")`
+oplocate -x `$arg2 + -9.0432199999999998` -y `$arg3 + 5.46469` $_obj_flying_cans_FG_randomize_orient_spin_add1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_add1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_add1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_add1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_input3 (Vop/parameter)
+set _obj_flying_cans_FG_randomize_orient_spin_input3 = `run("opadd -e -n -v parameter input3")`
+oplocate -x `$arg2 + -13.9016` -y `$arg3 + 5.46469` $_obj_flying_cans_FG_randomize_orient_spin_input3
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_input3 parmname ( parm_seed ) parmlabel ( seed ) floatdef ( 105.88 ) rangeflt ( -10000 10000 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_input3
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_input3
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_input3
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_subconst1 (Vop/subconst)
+set _obj_flying_cans_FG_randomize_orient_spin_subconst1 = `run("opadd -e -n -v subconst subconst1")`
+oplocate -x `$arg2 + 10.9656` -y `$arg3 + 0.82070100000000001` $_obj_flying_cans_FG_randomize_orient_spin_subconst1
+opparm $_obj_flying_cans_FG_randomize_orient_spin_subconst1 signature ( n ) subconst ( 0.5 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_subconst1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_subconst1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_subconst1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_normalize1 (Vop/normalize)
+set _obj_flying_cans_FG_randomize_orient_spin_normalize1 = `run("opadd -e -n -v normalize normalize1")`
+oplocate -x `$arg2 + 24.2028` -y `$arg3 + 0.34704000000000002` $_obj_flying_cans_FG_randomize_orient_spin_normalize1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_normalize1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_normalize1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_normalize1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_normalize2 (Vop/normalize)
+set _obj_flying_cans_FG_randomize_orient_spin_normalize2 = `run("opadd -e -n -v normalize normalize2")`
+oplocate -x `$arg2 + 8.5293200000000002` -y `$arg3 + -2.1485699999999999` $_obj_flying_cans_FG_randomize_orient_spin_normalize2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_normalize2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_normalize2
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_normalize2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_mix1 (Vop/mix)
+set _obj_flying_cans_FG_randomize_orient_spin_mix1 = `run("opadd -e -n -v mix mix1")`
+oplocate -x `$arg2 + 55.071800000000003` -y `$arg3 + -5.1350199999999999` $_obj_flying_cans_FG_randomize_orient_spin_mix1
+chblockbegin
+chadd -t 40 40 $_obj_flying_cans_FG_randomize_orient_spin_mix1 bias
+chkey -t 40 -v 0.5 -m 0 -a 0 -A 0 -T a  -F 'ch(\'../bias/floatdef\')' $_obj_flying_cans_FG_randomize_orient_spin_mix1/bias
+chblockend
+opparm $_obj_flying_cans_FG_randomize_orient_spin_mix1 signature ( n ) bias ( bias )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_mix1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_mix1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_mix1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_normalize3 (Vop/normalize)
+set _obj_flying_cans_FG_randomize_orient_spin_normalize3 = `run("opadd -e -n -v normalize normalize3")`
+oplocate -x `$arg2 + 58.9955` -y `$arg3 + -5.9441699999999997` $_obj_flying_cans_FG_randomize_orient_spin_normalize3
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_normalize3
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_normalize3
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_normalize3
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_quaternion1 (Vop/quaternion)
+set _obj_flying_cans_FG_randomize_orient_spin_quaternion1 = `run("opadd -e -n -v quaternion quaternion1")`
+oplocate -x `$arg2 + 74.877899999999997` -y `$arg3 + -5.6802999999999999` $_obj_flying_cans_FG_randomize_orient_spin_quaternion1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_quaternion1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_quaternion1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_quaternion1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_bind1 (Vop/bind)
+set _obj_flying_cans_FG_randomize_orient_spin_bind1 = `run("opadd -e -n -v bind bind1")`
+oplocate -x `$arg2 + 103.744` -y `$arg3 + -4.8320100000000004` $_obj_flying_cans_FG_randomize_orient_spin_bind1
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_bind1 parmname ( orient ) parmtype ( float4 ) overridetype ( on ) useasparmdefiner ( on ) exportparm ( whenconnected ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_bind1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_bind1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_bind1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_addconst1 (Vop/addconst)
+set _obj_flying_cans_FG_randomize_orient_spin_addconst1 = `run("opadd -e -n -v addconst addconst1")`
+oplocate -x `$arg2 + -3.8668499999999999` -y `$arg3 + 1.7336800000000001` $_obj_flying_cans_FG_randomize_orient_spin_addconst1
+opparm $_obj_flying_cans_FG_randomize_orient_spin_addconst1 signature ( f ) addconst ( 13.2 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_addconst1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_addconst1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_addconst1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_random2 (Vop/random)
+set _obj_flying_cans_FG_randomize_orient_spin_random2 = `run("opadd -e -n -v random random2")`
+oplocate -x `$arg2 + 7.7111700000000001` -y `$arg3 + 10.895899999999999` $_obj_flying_cans_FG_randomize_orient_spin_random2
+opparm $_obj_flying_cans_FG_randomize_orient_spin_random2 roundtoint ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_random2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_random2
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_random2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_ramp1 (Vop/rampparm)
+set _obj_flying_cans_FG_randomize_orient_spin_ramp1 = `run("opadd -e -n -v rampparm ramp1")`
+oplocate -x `$arg2 + 11.874700000000001` -y `$arg3 + 11.4208` $_obj_flying_cans_FG_randomize_orient_spin_ramp1
+opparm $_obj_flying_cans_FG_randomize_orient_spin_ramp1  rampcolordefault ( 2 ) rampfloatdefault ( 2 )
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_ramp1 parmname ( spin_speed_distribution ) ramptype ( flt ) rampcolordefault2pos ( 1 ) rampcolordefault2c ( 1 1 1 ) rampfloatdefault2pos ( 1 ) rampfloatdefault2value ( 1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_ramp1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_ramp1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_ramp1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_multiply1 (Vop/multiply)
+set _obj_flying_cans_FG_randomize_orient_spin_multiply1 = `run("opadd -e -n -v multiply multiply1")`
+oplocate -x `$arg2 + 17.875499999999999` -y `$arg3 + 13.114800000000001` $_obj_flying_cans_FG_randomize_orient_spin_multiply1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_multiply1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_multiply1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_multiply1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_random3 (Vop/random)
+set _obj_flying_cans_FG_randomize_orient_spin_random3 = `run("opadd -e -n -v random random3")`
+oplocate -x `$arg2 + 19.822600000000001` -y `$arg3 + -6.9794099999999997` $_obj_flying_cans_FG_randomize_orient_spin_random3
+opparm $_obj_flying_cans_FG_randomize_orient_spin_random3 roundtoint ( off )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_random3
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_random3
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_random3
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_ramp2 (Vop/rampparm)
+set _obj_flying_cans_FG_randomize_orient_spin_ramp2 = `run("opadd -e -n -v rampparm ramp2")`
+oplocate -x `$arg2 + 28.822600000000001` -y `$arg3 + -7.1631999999999998` $_obj_flying_cans_FG_randomize_orient_spin_ramp2
+opparm $_obj_flying_cans_FG_randomize_orient_spin_ramp2  rampcolordefault ( 2 ) rampfloatdefault ( 2 )
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_ramp2 parmname ( v_mix ) ramptype ( flt ) rampcolordefault2pos ( 1 ) rampcolordefault2c ( 1 1 1 ) rampfloatdefault2pos ( 1 ) rampfloatdefault2value ( 1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_ramp2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_ramp2
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_ramp2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_addconst2 (Vop/addconst)
+set _obj_flying_cans_FG_randomize_orient_spin_addconst2 = `run("opadd -e -n -v addconst addconst2")`
+oplocate -x `$arg2 + 14.812900000000001` -y `$arg3 + -6.9794099999999997` $_obj_flying_cans_FG_randomize_orient_spin_addconst2
+opparm $_obj_flying_cans_FG_randomize_orient_spin_addconst2 signature ( f ) addconst ( 99.1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_addconst2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_addconst2
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_addconst2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_bind2 (Vop/bind)
+set _obj_flying_cans_FG_randomize_orient_spin_bind2 = `run("opadd -e -n -v bind bind2")`
+oplocate -x `$arg2 + 65.190200000000004` -y `$arg3 + 6.2977600000000002` $_obj_flying_cans_FG_randomize_orient_spin_bind2
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_bind2 parmname ( orient ) parmtype ( float4 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_bind2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_bind2
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_bind2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_bind3 (Vop/bind)
+set _obj_flying_cans_FG_randomize_orient_spin_bind3 = `run("opadd -e -n -v bind bind3")`
+oplocate -x `$arg2 + 57.009799999999998` -y `$arg3 + -15.933400000000001` $_obj_flying_cans_FG_randomize_orient_spin_bind3
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_bind3 parmname ( w ) parmtype ( float3 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_bind3
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_bind3
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_bind3
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_switch1 (Vop/switch)
+set _obj_flying_cans_FG_randomize_orient_spin_switch1 = `run("opadd -e -n -v switch switch1")`
+oplocate -x `$arg2 + 63.9955` -y `$arg3 + -15.6334` $_obj_flying_cans_FG_randomize_orient_spin_switch1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_switch1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_switch1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_switch1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_const2 (Vop/constant)
+set _obj_flying_cans_FG_randomize_orient_spin_const2 = `run("opadd -e -n -v constant const2")`
+oplocate -x `$arg2 + 57.857700000000001` -y `$arg3 + -12.361800000000001` $_obj_flying_cans_FG_randomize_orient_spin_const2
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_const2 consttype ( float3 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_const2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_const2
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_const2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_add2 (Vop/add)
+set _obj_flying_cans_FG_randomize_orient_spin_add2 = `run("opadd -e -n -v add add2")`
+oplocate -x `$arg2 + 81.509799999999998` -y `$arg3 + -14.082800000000001` $_obj_flying_cans_FG_randomize_orient_spin_add2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_add2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_add2
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_add2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_bind4 (Vop/bind)
+set _obj_flying_cans_FG_randomize_orient_spin_bind4 = `run("opadd -e -n -v bind bind4")`
+oplocate -x `$arg2 + 90.323599999999999` -y `$arg3 + -13.9823` $_obj_flying_cans_FG_randomize_orient_spin_bind4
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_bind4 parmname ( w ) parmtype ( float3 ) overridetype ( on ) useasparmdefiner ( on ) exportparm ( whenconnected ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_bind4
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_bind4
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_bind4
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_multiply2 (Vop/multiply)
+set _obj_flying_cans_FG_randomize_orient_spin_multiply2 = `run("opadd -e -n -v multiply multiply2")`
+oplocate -x `$arg2 + 69.249099999999999` -y `$arg3 + -9.7064400000000006` $_obj_flying_cans_FG_randomize_orient_spin_multiply2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_multiply2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_multiply2
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_multiply2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_parm2 (Vop/parameter)
+set _obj_flying_cans_FG_randomize_orient_spin_parm2 = `run("opadd -e -n -v parameter parm2")`
+oplocate -x `$arg2 + 8.3435699999999997` -y `$arg3 + 13.8325` $_obj_flying_cans_FG_randomize_orient_spin_parm2
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_parm2 parmname ( parm_max_speed ) parmlabel ( 'Max Speed' ) floatdef ( 40 ) rangeflt ( 0 300 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_parm2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_parm2
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_parm2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_multiply3 (Vop/multiply)
+set _obj_flying_cans_FG_randomize_orient_spin_multiply3 = `run("opadd -e -n -v multiply multiply3")`
+oplocate -x `$arg2 + 27.965699999999998` -y `$arg3 + 12.002700000000001` $_obj_flying_cans_FG_randomize_orient_spin_multiply3
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_multiply3
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_multiply3
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_multiply3
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_add3 (Vop/add)
+set _obj_flying_cans_FG_randomize_orient_spin_add3 = `run("opadd -e -n -v add add3")`
+oplocate -x `$arg2 + 56.624099999999999` -y `$arg3 + 5.4473599999999998` $_obj_flying_cans_FG_randomize_orient_spin_add3
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_add3
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_add3
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_add3
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_parm1 (Vop/parameter)
+set _obj_flying_cans_FG_randomize_orient_spin_parm1 = `run("opadd -e -n -v parameter parm1")`
+oplocate -x `$arg2 + 47.370199999999997` -y `$arg3 + 14.0793` $_obj_flying_cans_FG_randomize_orient_spin_parm1
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_parm1 parmname ( offset_degrees ) rangeflt ( -360 360 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_parm1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_parm1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_parm1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_degtorad1 (Vop/degtorad)
+set _obj_flying_cans_FG_randomize_orient_spin_degtorad1 = `run("opadd -e -n -v degtorad degtorad1")`
+oplocate -x `$arg2 + 53.796300000000002` -y `$arg3 + 11.247999999999999` $_obj_flying_cans_FG_randomize_orient_spin_degtorad1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_degtorad1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_degtorad1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_degtorad1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_switch2 (Vop/switch)
+set _obj_flying_cans_FG_randomize_orient_spin_switch2 = `run("opadd -e -n -v switch switch2")`
+oplocate -x `$arg2 + 70.696799999999996` -y `$arg3 + 6.9770599999999998` $_obj_flying_cans_FG_randomize_orient_spin_switch2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_switch2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_switch2
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_switch2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_const3 (Vop/constant)
+set _obj_flying_cans_FG_randomize_orient_spin_const3 = `run("opadd -e -n -v constant const3")`
+oplocate -x `$arg2 + 64.561800000000005` -y `$arg3 + 8.5772600000000008` $_obj_flying_cans_FG_randomize_orient_spin_const3
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_const3 consttype ( float4 ) float4def ( 0 0 0 1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_const3
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_const3
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_const3
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_qmultiply2 (Vop/qmultiply)
+set _obj_flying_cans_FG_randomize_orient_spin_qmultiply2 = `run("opadd -e -n -v qmultiply qmultiply2")`
+oplocate -x `$arg2 + 83.935599999999994` -y `$arg3 + -2.3201299999999998` $_obj_flying_cans_FG_randomize_orient_spin_qmultiply2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_qmultiply2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_qmultiply2
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_qmultiply2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_dot1 (Vop/dot)
+set _obj_flying_cans_FG_randomize_orient_spin_dot1 = `run("opadd -e -n -v dot dot1")`
+oplocate -x `$arg2 + 13.944000000000001` -y `$arg3 + -0.14296` $_obj_flying_cans_FG_randomize_orient_spin_dot1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_dot1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_dot1
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_dot1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_multiply4 (Vop/multiply)
+set _obj_flying_cans_FG_randomize_orient_spin_multiply4 = `run("opadd -e -n -v multiply multiply4")`
+oplocate -x `$arg2 + 16.448599999999999` -y `$arg3 + -0.420516` $_obj_flying_cans_FG_randomize_orient_spin_multiply4
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_multiply4
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_multiply4
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_multiply4
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_subtract1 (Vop/subtract)
+set _obj_flying_cans_FG_randomize_orient_spin_subtract1 = `run("opadd -e -n -v subtract subtract1")`
+oplocate -x `$arg2 + 20.1845` -y `$arg3 + 0.34704000000000002` $_obj_flying_cans_FG_randomize_orient_spin_subtract1
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_subtract1
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_subtract1
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_subtract1
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_multiply5 (Vop/multiply)
+set _obj_flying_cans_FG_randomize_orient_spin_multiply5 = `run("opadd -e -n -v multiply multiply5")`
+oplocate -x `$arg2 + 24.607399999999998` -y `$arg3 + -6.9794099999999997` $_obj_flying_cans_FG_randomize_orient_spin_multiply5
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_multiply5
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_multiply5
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_multiply5
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_parm3 (Vop/parameter)
+set _obj_flying_cans_FG_randomize_orient_spin_parm3 = `run("opadd -e -n -v parameter parm3")`
+oplocate -x `$arg2 + 26.607299999999999` -y `$arg3 + 4.86151` $_obj_flying_cans_FG_randomize_orient_spin_parm3
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_parm3 parmname ( horizontal_axis_bias ) floatdef ( 0.5 ) exportcontext ( cvex )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_parm3
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_parm3
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_parm3
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_mix2 (Vop/mix)
+set _obj_flying_cans_FG_randomize_orient_spin_mix2 = `run("opadd -e -n -v mix mix2")`
+oplocate -x `$arg2 + 38.517899999999997` -y `$arg3 + 2.6177100000000002` $_obj_flying_cans_FG_randomize_orient_spin_mix2
+opparm $_obj_flying_cans_FG_randomize_orient_spin_mix2 signature ( n )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_mix2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_mix2
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_mix2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_normalize4 (Vop/normalize)
+set _obj_flying_cans_FG_randomize_orient_spin_normalize4 = `run("opadd -e -n -v normalize normalize4")`
+oplocate -x `$arg2 + 44.070300000000003` -y `$arg3 + -0.33295999999999998` $_obj_flying_cans_FG_randomize_orient_spin_normalize4
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_normalize4
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_normalize4
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_normalize4
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_dot2 (Vop/dot)
+set _obj_flying_cans_FG_randomize_orient_spin_dot2 = `run("opadd -e -n -v dot dot2")`
+oplocate -x `$arg2 + 27.056999999999999` -y `$arg3 + -0.49551600000000001` $_obj_flying_cans_FG_randomize_orient_spin_dot2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_dot2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_dot2
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_dot2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_const4 (Vop/constant)
+set _obj_flying_cans_FG_randomize_orient_spin_const4 = `run("opadd -e -n -v constant const4")`
+oplocate -x `$arg2 + 24.098199999999999` -y `$arg3 + -1.7405200000000001` $_obj_flying_cans_FG_randomize_orient_spin_const4
+opparm -V 20.5.278 $_obj_flying_cans_FG_randomize_orient_spin_const4 consttype ( float3 ) float3def ( 0 1 0 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_const4
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_const4
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_const4
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_multiply6 (Vop/multiply)
+set _obj_flying_cans_FG_randomize_orient_spin_multiply6 = `run("opadd -e -n -v multiply multiply6")`
+oplocate -x `$arg2 + 29.442499999999999` -y `$arg3 + -0.76051599999999997` $_obj_flying_cans_FG_randomize_orient_spin_multiply6
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_multiply6
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_multiply6
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_multiply6
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_subtract2 (Vop/subtract)
+set _obj_flying_cans_FG_randomize_orient_spin_subtract2 = `run("opadd -e -n -v subtract subtract2")`
+oplocate -x `$arg2 + 32.328400000000002` -y `$arg3 + 0.334484` $_obj_flying_cans_FG_randomize_orient_spin_subtract2
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_subtract2
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_subtract2
+opuserdata -n '___Version___' -v '20.5.278' $_obj_flying_cans_FG_randomize_orient_spin_subtract2
+
+# Node $_obj_flying_cans_FG_randomize_orient_spin_normalize5 (Vop/normalize)
+set _obj_flying_cans_FG_randomize_orient_spin_normalize5 = `run("opadd -e -n -v normalize normalize5")`
+oplocate -x `$arg2 + 35.313800000000001` -y `$arg3 + 0.18448400000000001` $_obj_flying_cans_FG_randomize_orient_spin_normalize5
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off -L off -M off -H on -E off $_obj_flying_cans_FG_randomize_orient_spin_normalize5
+opexprlanguage -s hscript $_obj_flying_cans_FG_randomize_orient_spin_normalize5
+opuserdata -n '___Version___' -v '' $_obj_flying_cans_FG_randomize_orient_spin_normalize5
+opcf ..
+opcf $_obj_flying_cans_FG_randomize_orient_spin
+oporder -e geometryvopglobal1 geometryvopoutput1 const1 random1 add1 input3 subconst1 normalize1 normalize2 mix1 normalize3 quaternion1 bind1 addconst1 random2 ramp1 multiply1 random3 ramp2 addconst2 bind2 bind3 switch1 const2 add2 bind4 multiply2 parm2 multiply3 add3 parm1 degtorad1 switch2 const3 qmultiply2 dot1 multiply4 subtract1 multiply5 parm3 mix2 normalize4 dot2 const4 multiply6 subtract2 normalize5 
+opcf ..
+opset -p on $_obj_flying_cans_FG_randomize_orient_spin
+
+opcf $arg1
+opcf $arg1
+opcf $_obj_flying_cans_FG_redo_orient_from_v
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_quaternion1 -0 $_obj_flying_cans_FG_redo_orient_from_v_bind1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_switch2 -0 $_obj_flying_cans_FG_redo_orient_from_v_normalize1
+opwire -n -o 1 $_obj_flying_cans_FG_redo_orient_from_v_bind3 -0 $_obj_flying_cans_FG_redo_orient_from_v_switch1
+opwire -n -o 12 $_obj_flying_cans_FG_redo_orient_from_v_geometryvopglobal1 -1 $_obj_flying_cans_FG_redo_orient_from_v_switch1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_bind3 -2 $_obj_flying_cans_FG_redo_orient_from_v_switch1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_add1 -0 $_obj_flying_cans_FG_redo_orient_from_v_random1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_const1 -0 $_obj_flying_cans_FG_redo_orient_from_v_add1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_input3 -1 $_obj_flying_cans_FG_redo_orient_from_v_add1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_switch1 -2 $_obj_flying_cans_FG_redo_orient_from_v_add1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_m4tom3 -0 $_obj_flying_cans_FG_redo_orient_from_v_matxtoquat1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_normalize1 -4 $_obj_flying_cans_FG_redo_orient_from_v_makeinstancexform1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_normalize6 -8 $_obj_flying_cans_FG_redo_orient_from_v_makeinstancexform1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_makeinstancexform1 -0 $_obj_flying_cans_FG_redo_orient_from_v_m4tom3
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_random1 -0 $_obj_flying_cans_FG_redo_orient_from_v_subconst1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_normalize1 -0 $_obj_flying_cans_FG_redo_orient_from_v_cross1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_subconst1 -1 $_obj_flying_cans_FG_redo_orient_from_v_cross1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_cross1 -0 $_obj_flying_cans_FG_redo_orient_from_v_normalize4
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_matxtoquat1 -0 $_obj_flying_cans_FG_redo_orient_from_v_quattovec1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_multiply1 -0 $_obj_flying_cans_FG_redo_orient_from_v_quaternion1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_normalize5 -1 $_obj_flying_cans_FG_redo_orient_from_v_quaternion1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_quattovec1 -0 $_obj_flying_cans_FG_redo_orient_from_v_normalize5
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_quattovec1 -0 $_obj_flying_cans_FG_redo_orient_from_v_length1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_length1 -0 $_obj_flying_cans_FG_redo_orient_from_v_multiply1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_bias -1 $_obj_flying_cans_FG_redo_orient_from_v_multiply1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_const4 -0 $_obj_flying_cans_FG_redo_orient_from_v_mix1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_normalize4 -1 $_obj_flying_cans_FG_redo_orient_from_v_mix1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_bias1 -2 $_obj_flying_cans_FG_redo_orient_from_v_mix1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_mix1 -0 $_obj_flying_cans_FG_redo_orient_from_v_normalize6
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_add1 -0 $_obj_flying_cans_FG_redo_orient_from_v_addconst1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_addconst1 -0 $_obj_flying_cans_FG_redo_orient_from_v_random2
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_random2 -0 $_obj_flying_cans_FG_redo_orient_from_v_compare1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_parm1 -1 $_obj_flying_cans_FG_redo_orient_from_v_compare1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_compare1 -0 $_obj_flying_cans_FG_redo_orient_from_v_switch2
+opwire -n -o 1 $_obj_flying_cans_FG_redo_orient_from_v_geometryvopglobal1 -1 $_obj_flying_cans_FG_redo_orient_from_v_switch2
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v_negate1 -2 $_obj_flying_cans_FG_redo_orient_from_v_switch2
+opwire -n -o 1 $_obj_flying_cans_FG_redo_orient_from_v_geometryvopglobal1 -0 $_obj_flying_cans_FG_redo_orient_from_v_negate1
+opcf ..
+opcf $arg1
+opwire -n $_obj_flying_cans_FG_redo_orient_from_v -0 $_obj_flying_cans_FG_randomize_orient_spin
+opcf $_obj_flying_cans_FG_randomize_orient_spin
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_add1 -0 $_obj_flying_cans_FG_randomize_orient_spin_random1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_const1 -0 $_obj_flying_cans_FG_randomize_orient_spin_add1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_input3 -1 $_obj_flying_cans_FG_randomize_orient_spin_add1
+opwire -n -o 5 $_obj_flying_cans_FG_randomize_orient_spin_geometryvopglobal1 -2 $_obj_flying_cans_FG_randomize_orient_spin_add1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_random1 -0 $_obj_flying_cans_FG_randomize_orient_spin_subconst1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_subtract1 -0 $_obj_flying_cans_FG_randomize_orient_spin_normalize1
+opwire -n -o 1 $_obj_flying_cans_FG_randomize_orient_spin_geometryvopglobal1 -0 $_obj_flying_cans_FG_randomize_orient_spin_normalize2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_normalize4 -0 $_obj_flying_cans_FG_randomize_orient_spin_mix1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_normalize2 -1 $_obj_flying_cans_FG_randomize_orient_spin_mix1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_ramp2 -2 $_obj_flying_cans_FG_randomize_orient_spin_mix1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_mix1 -0 $_obj_flying_cans_FG_randomize_orient_spin_normalize3
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_add3 -0 $_obj_flying_cans_FG_randomize_orient_spin_quaternion1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_normalize3 -1 $_obj_flying_cans_FG_randomize_orient_spin_quaternion1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_qmultiply2 -0 $_obj_flying_cans_FG_randomize_orient_spin_bind1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_add1 -0 $_obj_flying_cans_FG_randomize_orient_spin_addconst1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_addconst1 -0 $_obj_flying_cans_FG_randomize_orient_spin_random2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_random2 -0 $_obj_flying_cans_FG_randomize_orient_spin_ramp1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_parm2 -0 $_obj_flying_cans_FG_randomize_orient_spin_multiply1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_ramp1 -1 $_obj_flying_cans_FG_randomize_orient_spin_multiply1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_addconst2 -0 $_obj_flying_cans_FG_randomize_orient_spin_random3
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_multiply5 -0 $_obj_flying_cans_FG_randomize_orient_spin_ramp2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_addconst1 -0 $_obj_flying_cans_FG_randomize_orient_spin_addconst2
+opwire -n -o 1 $_obj_flying_cans_FG_randomize_orient_spin_bind3 -0 $_obj_flying_cans_FG_randomize_orient_spin_switch1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_const2 -1 $_obj_flying_cans_FG_randomize_orient_spin_switch1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_bind3 -2 $_obj_flying_cans_FG_randomize_orient_spin_switch1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_switch1 -0 $_obj_flying_cans_FG_randomize_orient_spin_add2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_multiply2 -1 $_obj_flying_cans_FG_randomize_orient_spin_add2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_add2 -0 $_obj_flying_cans_FG_randomize_orient_spin_bind4
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_normalize3 -0 $_obj_flying_cans_FG_randomize_orient_spin_multiply2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_multiply1 -1 $_obj_flying_cans_FG_randomize_orient_spin_multiply2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_multiply1 -0 $_obj_flying_cans_FG_randomize_orient_spin_multiply3
+opwire -n -o 9 $_obj_flying_cans_FG_randomize_orient_spin_geometryvopglobal1 -1 $_obj_flying_cans_FG_randomize_orient_spin_multiply3
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_degtorad1 -0 $_obj_flying_cans_FG_randomize_orient_spin_add3
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_multiply3 -1 $_obj_flying_cans_FG_randomize_orient_spin_add3
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_parm1 -0 $_obj_flying_cans_FG_randomize_orient_spin_degtorad1
+opwire -n -o 1 $_obj_flying_cans_FG_randomize_orient_spin_bind2 -0 $_obj_flying_cans_FG_randomize_orient_spin_switch2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_const3 -1 $_obj_flying_cans_FG_randomize_orient_spin_switch2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_bind2 -2 $_obj_flying_cans_FG_randomize_orient_spin_switch2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_quaternion1 -0 $_obj_flying_cans_FG_randomize_orient_spin_qmultiply2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_switch2 -1 $_obj_flying_cans_FG_randomize_orient_spin_qmultiply2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_subconst1 -0 $_obj_flying_cans_FG_randomize_orient_spin_dot1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_normalize2 -1 $_obj_flying_cans_FG_randomize_orient_spin_dot1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_normalize2 -0 $_obj_flying_cans_FG_randomize_orient_spin_multiply4
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_dot1 -1 $_obj_flying_cans_FG_randomize_orient_spin_multiply4
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_subconst1 -0 $_obj_flying_cans_FG_randomize_orient_spin_subtract1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_multiply4 -1 $_obj_flying_cans_FG_randomize_orient_spin_subtract1
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_random3 -0 $_obj_flying_cans_FG_randomize_orient_spin_multiply5
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_ramp1 -1 $_obj_flying_cans_FG_randomize_orient_spin_multiply5
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_normalize1 -0 $_obj_flying_cans_FG_randomize_orient_spin_mix2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_normalize5 -1 $_obj_flying_cans_FG_randomize_orient_spin_mix2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_parm3 -2 $_obj_flying_cans_FG_randomize_orient_spin_mix2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_mix2 -0 $_obj_flying_cans_FG_randomize_orient_spin_normalize4
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_normalize1 -0 $_obj_flying_cans_FG_randomize_orient_spin_dot2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_const4 -1 $_obj_flying_cans_FG_randomize_orient_spin_dot2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_const4 -0 $_obj_flying_cans_FG_randomize_orient_spin_multiply6
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_dot2 -1 $_obj_flying_cans_FG_randomize_orient_spin_multiply6
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_normalize1 -0 $_obj_flying_cans_FG_randomize_orient_spin_subtract2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_multiply6 -1 $_obj_flying_cans_FG_randomize_orient_spin_subtract2
+opwire -n $_obj_flying_cans_FG_randomize_orient_spin_subtract2 -0 $_obj_flying_cans_FG_randomize_orient_spin_normalize5
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_flying_cans_FG_randomize_orient_spin
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_flying_cans_FG_attribcreate_orient
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>

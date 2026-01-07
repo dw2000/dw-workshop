@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <tool name="DW_advect_age_field_old" label="DW Advect Age Field Old" icon="DOP_subnet">
+    <helpURL>operator:Dop/subnet</helpURL>
+    <toolMenuContext name="network">
+      <contextOpType>Dop/subnet</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'subnet' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_dopnet1_advectAgeField (Dop/subnet)
+set _obj_dopnet1_advectAgeField = `run("opadd -e -n -v subnet advectAgeField")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_dopnet1_advectAgeField
+opspareds '    parm {         name    "solver_ref"         label   "Solver Reference"         type    oppath         default { "../pyrosolver1" }         help    "The solver that this node is plugged into."         parmtag { "autoscope" "0000000000000000" }         parmtag { "oprelative" "." }     }     parm {         name    "density_threshold"         label   "Density Threshold"         type    float         default { "0.00833333" }         help    "Voxels with density greater than this value will have their age incremented by one timestep."         range   { 0! 1 }         parmtag { "autoscope" "0000000000000000" }     }     parm {         name    "labelparm"         label   "Label"         type    label         nolabel         default { "Wire this into your smoke or pyro solver\'s Advection input." }     } ' $_obj_dopnet1_advectAgeField
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_dopnet1_advectAgeField
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField
+opuserdata -n '___Version___' -v '21.0.440' $_obj_dopnet1_advectAgeField
+opcf $_obj_dopnet1_advectAgeField
+
+# Node $_obj_dopnet1_advectAgeField_update_age (Dop/gasfieldwrangle)
+set _obj_dopnet1_advectAgeField_update_age = `run("opadd -e -n -v gasfieldwrangle update_age")`
+oplocate -x `$arg2 + 11.522600000000001` -y `$arg3 + 4.7952700000000004` $_obj_dopnet1_advectAgeField_update_age
+opspareds '    parm {         name    "threshold"         label   "Threshold"         type    float         default { "0" }         range   { 0 10 }     }     group {         name    "folder1"         label   "Code"          parm {             name    "snippet"             baseparm             label   "VEXpression"             export  none         }         parm {             name    "exportlist"             baseparm             label   "Fields to Write to"             export  none         }         parm {             name    "vex_strict"             baseparm             label   "Enforce Prototypes"             export  none         }     }      group {         name    "folder1_1"         label   "Bindings"          parm {             name    "vex_cwdpath"             baseparm             label   "Evaluation Node Path"             export  none         }         parm {             name    "vex_outputmask"             baseparm             label   "Export Parameters"             export  none         }         parm {             name    "autobind"             baseparm             label   "Autobind by Name"             export  none         }         multiparm {             name    "bindings"             label    "Number of Bindings"             baseparm             default 0             parmtag { "autoscope" "0000000000000000" }             parmtag { "multistartoffset" "1" }              parm {                 name    "binddata#"                 baseparm                 label   "DOP Data"                 export  none             }             parm {                 name    "bindparm#"                 baseparm                 label   "VEX Parameter"                 export  none             }         }      }      group {         name    "folder1_2"         label   "Inputs"          parm {             name    "bindinputmenu1"             baseparm             label   "Input 1"             export  none         }         parm {             name    "bindgeoinput1"             baseparm             label   "SOP Path"             export  none         }         parm {             name    "binddopinput1"             baseparm             label   "DOP Data"             export  none         }         parm {             name    "bindinputmenu2"             baseparm             label   "Input 2"             export  none         }         parm {             name    "bindgeoinput2"             baseparm             label   "SOP Path"             export  none         }         parm {             name    "binddopinput2"             baseparm             label   "DOP Data"             export  none         }         parm {             name    "bindinputmenu3"             baseparm             label   "Input 3"             export  none         }         parm {             name    "bindgeoinput3"             baseparm             label   "SOP Path"             export  none         }         parm {             name    "binddopinput3"             baseparm             label   "DOP Data"             export  none         }         parm {             name    "bindinputmenu4"             baseparm             label   "Input 4"             export  none         }         parm {             name    "bindgeoinput4"             baseparm             label   "SOP Path"             export  none         }         parm {             name    "binddopinput4"             baseparm             label   "DOP Data"             export  none         }     }      parm {         name    "usetimestep"         baseparm         label   "Use Timestep"         export  none     }     parm {         name    "timescale"         baseparm         label   "Time Scale"         export  none     }     parm {         name    "vex_stencil"         baseparm         label   "Stencil Field"         export  none     }     parm {         name    "vex_precision"         baseparm         label   "VEX Precision"         export  none     }     parm {         name    "binddopuseself1"         baseparm         label   "Use This Object\'s Data"         export  none     }     parm {         name    "binddopuseself2"         baseparm         label   "Use This Object\'s Data"         export  none     }     parm {         name    "binddopuseself3"         baseparm         label   "Use This Object\'s Data"         export  none     }     parm {         name    "binddopuseself4"         baseparm         label   "Use This Object\'s Data"         export  none     } ' $_obj_dopnet1_advectAgeField_update_age
+opparm $_obj_dopnet1_advectAgeField_update_age  bindings ( 0 )
+chblockbegin
+chadd -t 40.583333333333336 40.583333333333336 $_obj_dopnet1_advectAgeField_update_age threshold
+chkey -t 40.583333333333336 -v 0.0083333333333333332 -m 0 -a 0 -A 0 -T a  -F 'ch("../density_threshold")' $_obj_dopnet1_advectAgeField_update_age/threshold
+chblockend
+opparm $_obj_dopnet1_advectAgeField_update_age snippet ( 'if (f@density > chf("threshold")) \n    f@age += f@TimeInc;' ) exportlist ( age ) threshold ( threshold )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_dopnet1_advectAgeField_update_age
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off $_obj_dopnet1_advectAgeField_update_age
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_update_age
+opuserdata -n '___Version___' -v '' $_obj_dopnet1_advectAgeField_update_age
+
+# Node $_obj_dopnet1_advectAgeField_enablesolver3 (Dop/enablesolver)
+set _obj_dopnet1_advectAgeField_enablesolver3 = `run("opadd -e -n -v enablesolver enablesolver3")`
+oplocate -x `$arg2 + -1.50112` -y `$arg3 + 2.9109500000000001` $_obj_dopnet1_advectAgeField_enablesolver3
+opparm -V 21.0.440 $_obj_dopnet1_advectAgeField_enablesolver3 enabledatamode ( missing ) enabledata ( age )
+opcolor -c 0.60000002384185791 1 0.60000002384185791 $_obj_dopnet1_advectAgeField_enablesolver3
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_dopnet1_advectAgeField_enablesolver3
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_enablesolver3
+opuserdata -n '___Version___' -v '21.0.440' $_obj_dopnet1_advectAgeField_enablesolver3
+
+# Node $_obj_dopnet1_advectAgeField_create_age_field (Dop/gasmatchfield)
+set _obj_dopnet1_advectAgeField_create_age_field = `run("opadd -e -n -v gasmatchfield create_age_field")`
+oplocate -x `$arg2 + -4.8224200000000002` -y `$arg3 + 6.0526499999999999` $_obj_dopnet1_advectAgeField_create_age_field
+opparm -V 21.0.440 $_obj_dopnet1_advectAgeField_create_age_field field ( age ) reffield ( density ) matchsamples ( on ) border ( same )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_dopnet1_advectAgeField_create_age_field
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_dopnet1_advectAgeField_create_age_field
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_create_age_field
+opuserdata -n '___Version___' -v '21.0.440' $_obj_dopnet1_advectAgeField_create_age_field
+
+# Node $_obj_dopnet1_advectAgeField_merge11 (Dop/merge)
+set _obj_dopnet1_advectAgeField_merge11 = `run("opadd -e -n -v merge merge11")`
+oplocate -x `$arg2 + 3.73244` -y `$arg3 + -8.0413499999999996` $_obj_dopnet1_advectAgeField_merge11
+chblockbegin
+chadd -t 45.791666666666664 45.791666666666664 $_obj_dopnet1_advectAgeField_merge11 activation
+chkey -t 45.791666666666664 -v 1 -m 0 -a 0 -A 0 -T a  -F 'constant()' $_obj_dopnet1_advectAgeField_merge11/activation
+chblockend
+opset -d off -r on -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_dopnet1_advectAgeField_merge11
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_merge11
+opuserdata -n '___Version___' -v '21.0.440' $_obj_dopnet1_advectAgeField_merge11
+
+# Node $_obj_dopnet1_advectAgeField_gasresizefield_age (Dop/gasresizefield)
+set _obj_dopnet1_advectAgeField_gasresizefield_age = `run("opadd -e -n -v gasresizefield gasresizefield_age")`
+oplocate -x `$arg2 + 3.19387` -y `$arg3 + 5.2223100000000002` $_obj_dopnet1_advectAgeField_gasresizefield_age
+opparm -V 21.0.440 $_obj_dopnet1_advectAgeField_gasresizefield_age field ( age ) reffield ( density )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_dopnet1_advectAgeField_gasresizefield_age
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_gasresizefield_age
+opuserdata -n '___Version___' -v '21.0.440' $_obj_dopnet1_advectAgeField_gasresizefield_age
+
+# Node $_obj_dopnet1_advectAgeField_merge4 (Dop/merge)
+set _obj_dopnet1_advectAgeField_merge4 = `run("opadd -e -n -v merge merge4")`
+oplocate -x `$arg2 + -2.5106199999999999` -y `$arg3 + 4.4151499999999997` $_obj_dopnet1_advectAgeField_merge4
+chblockbegin
+chadd -t 45.791666666666664 45.791666666666664 $_obj_dopnet1_advectAgeField_merge4 activation
+chkey -t 45.791666666666664 -v 1 -m 0 -a 0 -A 0 -T a  -F 'constant()' $_obj_dopnet1_advectAgeField_merge4/activation
+chblockend
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_dopnet1_advectAgeField_merge4
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_merge4
+opuserdata -n '___Version___' -v '21.0.440' $_obj_dopnet1_advectAgeField_merge4
+
+# Node $_obj_dopnet1_advectAgeField_clear_age (Dop/gascalculate)
+set _obj_dopnet1_advectAgeField_clear_age = `run("opadd -e -n -v gascalculate clear_age")`
+oplocate -x `$arg2 + -1.50112` -y `$arg3 + 6.0526499999999999` $_obj_dopnet1_advectAgeField_clear_age
+opparm -V 21.0.440 $_obj_dopnet1_advectAgeField_clear_age fielddst ( age )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_dopnet1_advectAgeField_clear_age
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_clear_age
+opuserdata -n '___Version___' -v '21.0.440' $_obj_dopnet1_advectAgeField_clear_age
+
+# Node $_obj_dopnet1_advectAgeField_advect_age (Dop/subnet)
+set _obj_dopnet1_advectAgeField_advect_age = `run("opadd -e -n -v subnet advect_age")`
+oplocate -x `$arg2 + 7.3495600000000003` -y `$arg3 + 5.0808799999999996` $_obj_dopnet1_advectAgeField_advect_age
+opspareds '    parm {         name    "solver_ref"         label   "Solver Reference"         type    oppath         default { "" }         help    "The solver that this node is plugged into."         range   { 0 1 }         parmtag { "oprelative" "." }     }     parm {         name    "sepparm"         label   "Separator"         type    separator         default { "" }         range   { 0 1 }     }     parm {         name    "advecttype"         label   "Advection Type"         type    ordinal         default { "single" }         menu {             "single"                "Single Stage"             "bfecc"                 "BFECC"             "modifiedmaccormack"    "Modified MacCormack"         }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }     }     parm {         name    "clampvalues"         label   "Clamp Values"         type    ordinal         default { [ "ch(\\"../../clampvalues\\")" hscript-expr ] }         disablewhen "{ advecttype == single }"         menu {             "off"       "None"             "on"        "Clamp"             "revert"    "Revert"         }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }     }     parm {         name    "blendwidth"         label   "Blend"         type    float         default { [ "ch(\\"../../blendwidth\\")" hscript-expr ] }         disablewhen "{ advecttype == single }"         range   { 0! 0.5! }         parmtag { "autoscope" "0000000000000000" }     }     parm {         name    "field"         label   "Field"         type    string         default { "color" }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }     }     parm {         name    "advectmethod"         label   "Advection Method"         type    ordinal         default { "single" }         menu {             "single"    "Single Step"             "trace"     "Trace"             "midpoint"  "Trace Midpoint"             "hjweno"    "HJWENO"             "upwind"    "Upwind"             "rk3"       "Trace RK3"             "rk4"       "Trace RK4"         }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }     }     parm {         name    "cflcond"         label   "CFL Condition"         type    float         default { "0" }         range   { 0 10 }         parmtag { "autoscope" "0000000000000000" }     }     parm {         name    "timescale"         label   "Time Scale"         type    float         default { "1" }         range   { 0 10 }         parmtag { "autoscope" "0000000000000000" }     }     parm {         name    "opencl"         label   "Use OpenCL"         type    toggle         invisible         default { "off" }         range   { 0 1 }         parmtag { "autoscope" "0000000000000000" }     }     parm {         name    "sepparm2"         label   "Separator"         type    separator         default { "" }     }     parm {         name    "correct_collisions"         label   "Correct Collisions"         type    toggle         default { "1" }     } ' $_obj_dopnet1_advectAgeField_advect_age
+chblockbegin
+chadd -t 40.583333333333336 40.583333333333336 $_obj_dopnet1_advectAgeField_advect_age solver_ref
+chkey -t 40.583333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chsop("../solver_ref")' $_obj_dopnet1_advectAgeField_advect_age/solver_ref
+chadd -t 37.458333333333336 37.458333333333336 $_obj_dopnet1_advectAgeField_advect_age advecttype
+chkey -t 37.458333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch(strcat(chs("solver_ref"), "/advecttype"))' $_obj_dopnet1_advectAgeField_advect_age/advecttype
+chadd -t 41.666666666666664 41.666666666666664 $_obj_dopnet1_advectAgeField_advect_age clampvalues
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch(strcat(chs("solver_ref"), "/clampvalues"))\n' $_obj_dopnet1_advectAgeField_advect_age/clampvalues
+chadd -t 41.666666666666664 41.666666666666664 $_obj_dopnet1_advectAgeField_advect_age blendwidth
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch(strcat(chs("solver_ref"), "/blendwidth"))' $_obj_dopnet1_advectAgeField_advect_age/blendwidth
+chadd -t 41.666666666666664 41.666666666666664 $_obj_dopnet1_advectAgeField_advect_age advectmethod
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch(strcat(chs("solver_ref"), "/advectmethod"))' $_obj_dopnet1_advectAgeField_advect_age/advectmethod
+chadd -t 41.666666666666664 41.666666666666664 $_obj_dopnet1_advectAgeField_advect_age cflcond
+chkey -t 41.666666666666664 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch(strcat(chs("solver_ref"), "/advect_cfl"))' $_obj_dopnet1_advectAgeField_advect_age/cflcond
+chadd -t 41.666666666666664 41.666666666666664 $_obj_dopnet1_advectAgeField_advect_age timescale
+chkey -t 41.666666666666664 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch(strcat(chs("solver_ref"), "/timescale"))' $_obj_dopnet1_advectAgeField_advect_age/timescale
+chadd -t 41.666666666666664 41.666666666666664 $_obj_dopnet1_advectAgeField_advect_age correct_collisions
+chkey -t 41.666666666666664 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch(strcat(chs("solver_ref"), "/correct_collisions"))' $_obj_dopnet1_advectAgeField_advect_age/correct_collisions
+chblockend
+opparm -V 21.0.440 $_obj_dopnet1_advectAgeField_advect_age solver_ref ( solver_ref ) advecttype ( advecttype ) clampvalues ( clampvalues ) blendwidth ( blendwidth ) field ( age ) advectmethod ( advectmethod ) cflcond ( cflcond ) timescale ( timescale ) correct_collisions ( correct_collisions )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_dopnet1_advectAgeField_advect_age
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_dopnet1_advectAgeField_advect_age
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_advect_age
+opuserdata -n '___Version___' -v '21.0.440' $_obj_dopnet1_advectAgeField_advect_age
+opcf $_obj_dopnet1_advectAgeField_advect_age
+
+# Node $_obj_dopnet1_advectAgeField_advect_age_advect (Dop/gasadvectfield)
+set _obj_dopnet1_advectAgeField_advect_age_advect = `run("opadd -e -n -v gasadvectfield advect")`
+oplocate -x `$arg2 + -1.8054600000000001` -y `$arg3 + 3.7508599999999999` $_obj_dopnet1_advectAgeField_advect_age_advect
+chblockbegin
+chadd -t 37.458333333333336 37.458333333333336 $_obj_dopnet1_advectAgeField_advect_age_advect advecttype
+chkey -t 37.458333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../advecttype")' $_obj_dopnet1_advectAgeField_advect_age_advect/advecttype
+chadd -t 37.458333333333336 37.458333333333336 $_obj_dopnet1_advectAgeField_advect_age_advect clampvalues
+chkey -t 37.458333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../clampvalues")' $_obj_dopnet1_advectAgeField_advect_age_advect/clampvalues
+chadd -t 37.458333333333336 37.458333333333336 $_obj_dopnet1_advectAgeField_advect_age_advect blendwidth
+chkey -t 37.458333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../blendwidth")' $_obj_dopnet1_advectAgeField_advect_age_advect/blendwidth
+chadd -t 37.458333333333336 37.458333333333336 $_obj_dopnet1_advectAgeField_advect_age_advect field
+chkey -t 37.458333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'chs("../field")' $_obj_dopnet1_advectAgeField_advect_age_advect/field
+chadd -t 37.458333333333336 37.458333333333336 $_obj_dopnet1_advectAgeField_advect_age_advect advectmethod
+chkey -t 37.458333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../advectmethod")' $_obj_dopnet1_advectAgeField_advect_age_advect/advectmethod
+chadd -t 37.458333333333336 37.458333333333336 $_obj_dopnet1_advectAgeField_advect_age_advect cflcond
+chkey -t 37.458333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../cflcond")' $_obj_dopnet1_advectAgeField_advect_age_advect/cflcond
+chadd -t 37.458333333333336 37.458333333333336 $_obj_dopnet1_advectAgeField_advect_age_advect timescale
+chkey -t 37.458333333333336 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../timescale")' $_obj_dopnet1_advectAgeField_advect_age_advect/timescale
+chadd -t 37.458333333333336 37.458333333333336 $_obj_dopnet1_advectAgeField_advect_age_advect opencl
+chkey -t 37.458333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../opencl")' $_obj_dopnet1_advectAgeField_advect_age_advect/opencl
+chblockend
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_dopnet1_advectAgeField_advect_age_advect
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off $_obj_dopnet1_advectAgeField_advect_age_advect
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_advect_age_advect
+opuserdata -n '___Version___' -v '' $_obj_dopnet1_advectAgeField_advect_age_advect
+
+# Node $_obj_dopnet1_advectAgeField_advect_age_clamp_inside (Dop/gasenforceboundary)
+set _obj_dopnet1_advectAgeField_advect_age_clamp_inside = `run("opadd -e -n -v gasenforceboundary clamp_inside")`
+oplocate -x `$arg2 + 2.5985499999999999` -y `$arg3 + 4.1474099999999998` $_obj_dopnet1_advectAgeField_advect_age_clamp_inside
+chblockbegin
+chadd -t 37.458333333333336 37.458333333333336 $_obj_dopnet1_advectAgeField_advect_age_clamp_inside opencl
+chkey -t 37.458333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F 'ch("../opencl")' $_obj_dopnet1_advectAgeField_advect_age_clamp_inside/opencl
+chblockend
+opparm -V 21.0.440 $_obj_dopnet1_advectAgeField_advect_age_clamp_inside field ( '`chs("../field")`' ) opencl ( opencl ) solverperobject ( on )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_dopnet1_advectAgeField_advect_age_clamp_inside
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_dopnet1_advectAgeField_advect_age_clamp_inside
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_advect_age_clamp_inside
+opuserdata -n '___Version___' -v '21.0.440' $_obj_dopnet1_advectAgeField_advect_age_clamp_inside
+
+# Node $_obj_dopnet1_advectAgeField_advect_age_merge2 (Dop/merge)
+set _obj_dopnet1_advectAgeField_advect_age_merge2 = `run("opadd -e -n -v merge merge2")`
+oplocate -x `$arg2 + -0.175149` -y `$arg3 + 2.00651` $_obj_dopnet1_advectAgeField_advect_age_merge2
+chblockbegin
+chadd -t 37.458333333333336 37.458333333333336 $_obj_dopnet1_advectAgeField_advect_age_merge2 activation
+chkey -t 37.458333333333336 -v 1 -m 0 -a 0 -A 0 -T a  -F 'constant()' $_obj_dopnet1_advectAgeField_advect_age_merge2/activation
+chblockend
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_dopnet1_advectAgeField_advect_age_merge2
+opset -d off -r on -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_dopnet1_advectAgeField_advect_age_merge2
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_advect_age_merge2
+opuserdata -n '___Version___' -v '21.0.440' $_obj_dopnet1_advectAgeField_advect_age_merge2
+
+# Node $_obj_dopnet1_advectAgeField_advect_age_OUT (Dop/null)
+set _obj_dopnet1_advectAgeField_advect_age_OUT = `run("opadd -e -n -v null OUT")`
+oplocate -x `$arg2 + -0.175149` -y `$arg3 + 0.113797` $_obj_dopnet1_advectAgeField_advect_age_OUT
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_dopnet1_advectAgeField_advect_age_OUT
+opset -d on -r off -h off -f off -y off -t off -l off -s off -u off -F off -c off -e on -b off $_obj_dopnet1_advectAgeField_advect_age_OUT
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_advect_age_OUT
+opuserdata -n '___Version___' -v '' $_obj_dopnet1_advectAgeField_advect_age_OUT
+
+# Node $_obj_dopnet1_advectAgeField_advect_age_enable_correct_collisions (Dop/switchsolver)
+set _obj_dopnet1_advectAgeField_advect_age_enable_correct_collisions = `run("opadd -e -n -v switchsolver enable_correct_collisions")`
+oplocate -x `$arg2 + 1.73336` -y `$arg3 + 3.0874100000000002` $_obj_dopnet1_advectAgeField_advect_age_enable_correct_collisions
+chblockbegin
+chadd -t 0 0 $_obj_dopnet1_advectAgeField_advect_age_enable_correct_collisions defswitchvalue
+chkey -t 0 -v 1 -m 0 -a 0 -A 0 -T a  -F 'ch("../correct_collisions")' $_obj_dopnet1_advectAgeField_advect_age_enable_correct_collisions/defswitchvalue
+chblockend
+opparm -V 21.0.440 $_obj_dopnet1_advectAgeField_advect_age_enable_correct_collisions usedefswitchvalue ( on ) valueenablesall ( on ) defswitchvalue ( defswitchvalue ) defaultparmop ( always ) solverperobject ( on )
+opcolor -c 0.80000001192092896 0.80000001192092896 0.80000001192092896 $_obj_dopnet1_advectAgeField_advect_age_enable_correct_collisions
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_dopnet1_advectAgeField_advect_age_enable_correct_collisions
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_advect_age_enable_correct_collisions
+opuserdata -n '___Version___' -v '21.0.440' $_obj_dopnet1_advectAgeField_advect_age_enable_correct_collisions
+oporder -e advect clamp_inside merge2 OUT enable_correct_collisions 
+opcf ..
+
+# Node $_obj_dopnet1_advectAgeField_output1 (Dop/output)
+set _obj_dopnet1_advectAgeField_output1 = `run("opadd -e -n -v output output1")`
+oplocate -x `$arg2 + 3.5872600000000001` -y `$arg3 + -10.9186` $_obj_dopnet1_advectAgeField_output1
+chblockbegin
+chadd -t 40.583333333333336 40.583333333333336 $_obj_dopnet1_advectAgeField_output1 f1
+chkey -t 40.583333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FSTART' $_obj_dopnet1_advectAgeField_output1/f1
+chadd -t 40.583333333333336 40.583333333333336 $_obj_dopnet1_advectAgeField_output1 f2
+chkey -t 40.583333333333336 -v 0 -m 0 -a 0 -A 0 -T a  -F '$FEND' $_obj_dopnet1_advectAgeField_output1/f2
+chblockend
+opset -d on -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_dopnet1_advectAgeField_output1
+opexprlanguage -s hscript $_obj_dopnet1_advectAgeField_output1
+opuserdata -n '___Version___' -v '' $_obj_dopnet1_advectAgeField_output1
+oporder -e update_age enablesolver3 create_age_field merge11 gasresizefield_age merge4 clear_age advect_age output1 
+opcf ..
+opset -p on $_obj_dopnet1_advectAgeField
+
+opcf $arg1
+opcf $_obj_dopnet1_advectAgeField
+opwire -n $_obj_dopnet1_advectAgeField_merge4 -0 $_obj_dopnet1_advectAgeField_enablesolver3
+opwire -n $_obj_dopnet1_advectAgeField_enablesolver3 -0 $_obj_dopnet1_advectAgeField_merge11
+opwire -n $_obj_dopnet1_advectAgeField_gasresizefield_age -1 $_obj_dopnet1_advectAgeField_merge11
+opwire -n $_obj_dopnet1_advectAgeField_advect_age -2 $_obj_dopnet1_advectAgeField_merge11
+opwire -n $_obj_dopnet1_advectAgeField_update_age -3 $_obj_dopnet1_advectAgeField_merge11
+opwire -n $_obj_dopnet1_advectAgeField_create_age_field -0 $_obj_dopnet1_advectAgeField_merge4
+opwire -n $_obj_dopnet1_advectAgeField_clear_age -1 $_obj_dopnet1_advectAgeField_merge4
+opcf $_obj_dopnet1_advectAgeField_advect_age
+opwire -n $_obj_dopnet1_advectAgeField_advect_age_advect -0 $_obj_dopnet1_advectAgeField_advect_age_merge2
+opwire -n $_obj_dopnet1_advectAgeField_advect_age_enable_correct_collisions -1 $_obj_dopnet1_advectAgeField_advect_age_merge2
+opwire -n $_obj_dopnet1_advectAgeField_advect_age_merge2 -0 $_obj_dopnet1_advectAgeField_advect_age_OUT
+opwire -n $_obj_dopnet1_advectAgeField_advect_age_clamp_inside -0 $_obj_dopnet1_advectAgeField_advect_age_enable_correct_collisions
+opcf ..
+opwire -n $_obj_dopnet1_advectAgeField_merge11 -0 $_obj_dopnet1_advectAgeField_output1
+opcf ..
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_dopnet1_advectAgeField
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_dopnet1_advectAgeField
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+</shelfDocument>
